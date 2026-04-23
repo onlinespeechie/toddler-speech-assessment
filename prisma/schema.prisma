@@ -12,7 +12,7 @@ model Contact {
   id          String   @id @default(cuid())
   parentName  String
   parentEmail String
-  ageRange    String
+  childDoB    DateTime
   createdAt   DateTime @default(now())
 
   submissions Submission[]
