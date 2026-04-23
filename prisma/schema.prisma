@@ -1,0 +1,70 @@
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Contact {
+  id          String   @id @default(cuid())
+  parentName  String
+  parentEmail String
+  ageRange    String
+  createdAt   DateTime @default(now())
+
+  submissions Submission[]
+}
+
+model QuestionSequence {
+  id        String   @id @default(cuid())
+  title     String   // e.g. "0-12 months"
+  minMonths Int
+  maxMonths Int
+  
+  placements SequencePlacement[]
+}
+
+model Question {
+  id                 String           @id @default(cuid())
+  text               String
+  videoUrl           String?
+  isTagQuestion      Boolean          @default(false)
+  
+  options            Option[]
+  placements         SequencePlacement[]
+}
+
+model SequencePlacement {
+  id         String   @id @default(cuid())
+  order      Int      @default(0)
+  
+  questionId String
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  
+  sequenceId String
+  sequence   QuestionSequence @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
+  
+  @@unique([sequenceId, questionId])
+}
+
+model Option {
+  id         String   @id @default(cuid())
+  text       String
+  weight     Int      @default(0) // 0, 5, or 10 (or 0 for tag questions)
+  tagValue   String?  // Optional tag string specifically bound to tag questions
+  questionId String
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+}
+
+model Submission {
+  id         String   @id @default(cuid())
+  totalScore Int
+  tag        String
+  finalTag   String?
+  contactId  String
+  contact    Contact  @relation(fields: [contactId], references: [id])
+  createdAt  DateTime @default(now())
+}
