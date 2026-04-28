@@ -64,9 +64,10 @@ export default function AdminPanel() {
     setLoading(true);
     try {
       const hdrs = { 'ngrok-skip-browser-warning': 'true' };
+      const t = Date.now();
       const [seqRes, bankRes] = await Promise.all([
-        fetch('/api/admin/sequences', { headers: hdrs, credentials: 'include' }),
-        fetch('/api/admin/bank', { headers: hdrs, credentials: 'include' })
+        fetch(`/api/admin/sequences?t=${t}`, { headers: hdrs, credentials: 'include', cache: 'no-store' }),
+        fetch(`/api/admin/bank?t=${t}`, { headers: hdrs, credentials: 'include', cache: 'no-store' })
       ]);
       
       // Safety check if Ngrok intercepted with HTML instead of JSON
