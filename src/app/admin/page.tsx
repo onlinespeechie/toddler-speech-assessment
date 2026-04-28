@@ -13,6 +13,8 @@ type Question = {
   id: string;
   text: string;
   videoUrl?: string | null;
+  internalCode?: string | null;
+  category?: string | null;
   isTagQuestion?: boolean;
   options: Option[];
   placements?: any[];
@@ -43,6 +45,8 @@ export default function AdminPanel() {
   // New Question Form State (Bank)
   const [newQuestionText, setNewQuestionText] = useState('');
   const [newVideoUrl, setNewVideoUrl] = useState('');
+  const [newInternalCode, setNewInternalCode] = useState('');
+  const [newCategory, setNewCategory] = useState('');
   const [newOptions, setNewOptions] = useState<Option[]>([
     { text: 'Yes', weight: 10 },
     { text: 'Sometimes', weight: 5 },
@@ -54,7 +58,7 @@ export default function AdminPanel() {
 
   // Editing state (Bank)
   const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState<{text: string; videoUrl: string; options: Option[]; isTagQuestion: boolean}>({ text: '', videoUrl: '', options: [], isTagQuestion: false });
+  const [editForm, setEditForm] = useState<{text: string; videoUrl: string; internalCode: string; category: string; options: Option[]; isTagQuestion: boolean}>({ text: '', videoUrl: '', internalCode: '', category: '', options: [], isTagQuestion: false });
 
   const fetchData = async () => {
     setLoading(true);
@@ -105,11 +109,13 @@ export default function AdminPanel() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
       credentials: 'include',
-      body: JSON.stringify({ text: newQuestionText, videoUrl: newVideoUrl, options: newOptions })
+      body: JSON.stringify({ text: newQuestionText, videoUrl: newVideoUrl, internalCode: newInternalCode || null, category: newCategory || null, options: newOptions })
     });
     
     setNewQuestionText('');
     setNewVideoUrl('');
+    setNewInternalCode('');
+    setNewCategory('');
     setNewOptions([{ text: 'Yes', weight: 10 }, { text: 'Sometimes', weight: 5 }, { text: 'No', weight: 0 }]);
     fetchData(); 
   };
@@ -120,6 +126,8 @@ export default function AdminPanel() {
     setEditForm({
       text: q.text,
       videoUrl: q.videoUrl || '',
+      internalCode: q.internalCode || '',
+      category: q.category || '',
       isTagQuestion: q.isTagQuestion || false,
       options: q.options.map(o => ({ id: o.id, text: o.text, weight: o.weight, tagValue: o.tagValue }))
     });
@@ -139,7 +147,7 @@ export default function AdminPanel() {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
       credentials: 'include',
-      body: JSON.stringify({ text: editForm.text, videoUrl: editForm.videoUrl, options: editForm.options })
+      body: JSON.stringify({ text: editForm.text, videoUrl: editForm.videoUrl, internalCode: editForm.internalCode || null, category: editForm.category || null, options: editForm.options })
     });
     setEditingQuestionId(null);
     fetchData();
@@ -253,7 +261,8 @@ export default function AdminPanel() {
                 {editingQuestionId !== q.id && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div>
-                      <h3 style={{ fontSize: '1.2rem', marginBottom: '12px' }}>{q.text}</h3>
+                      <h3 style={{ fontSize: '1.2rem', marginBottom: '4px' }}>{q.text}</h3>
+                      {q.internalCode && <div style={{ marginBottom: '8px', fontSize: '0.85rem', color: '#64748b', fontWeight: 'bold' }}>Code: {q.internalCode} {q.category ? `| Category: ${q.category}` : ''}</div>}
                       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
                         {q.options.map(o => (
                           <span key={o.id} style={{ background: '#E2E2D1', padding: '4px 8px', borderRadius: '4px', fontSize: '0.85rem', fontWeight: 600 }}>
@@ -274,6 +283,10 @@ export default function AdminPanel() {
                   <div>
                     <h3 style={{ marginBottom: '16px' }}>Edit Global Question</h3>
                     <input type="text" className="input-field" value={editForm.text} onChange={e => setEditForm({...editForm, text: e.target.value})} style={{ marginBottom: '16px' }} />
+                    <div style={{ display: 'flex', gap: '16px', marginBottom: '16px' }}>
+                      <input type="text" className="input-field" placeholder="Internal Code (e.g. Q38, ICS_1)" value={editForm.internalCode} onChange={e => setEditForm({...editForm, internalCode: e.target.value})} style={{ flex: 1 }} />
+                      <input type="text" className="input-field" placeholder="Category (e.g. Expressive)" value={editForm.category} onChange={e => setEditForm({...editForm, category: e.target.value})} style={{ flex: 1 }} />
+                    </div>
                     <input type="url" className="input-field" placeholder="Optional Video URL (e.g. YouTube iframe src, or .mp4 link)" value={editForm.videoUrl} onChange={e => setEditForm({...editForm, videoUrl: e.target.value})} style={{ marginBottom: '16px' }} />
                     <h4 style={{ marginBottom: '8px', fontSize: '1rem' }}>Options</h4>
                     {editForm.options.map((opt, oIndex) => (
@@ -367,6 +380,17 @@ export default function AdminPanel() {
             <label style={{ fontWeight: 600, display: 'block', marginBottom: '8px' }}>Question Text</label>
             <input type="text" className="input-field" placeholder="e.g. Can your child point to things?" value={newQuestionText} onChange={e => setNewQuestionText(e.target.value)} style={{ marginBottom: '16px' }} />
             
+            <div style={{ display: 'flex', gap: '16px', marginBottom: '16px' }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ fontWeight: 600, display: 'block', marginBottom: '8px' }}>Internal Code</label>
+                <input type="text" className="input-field" placeholder="e.g. Q38, ICS_1, BRIDGE_1" value={newInternalCode} onChange={e => setNewInternalCode(e.target.value)} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={{ fontWeight: 600, display: 'block', marginBottom: '8px' }}>Category</label>
+                <input type="text" className="input-field" placeholder="e.g. Expressive, Comprehension" value={newCategory} onChange={e => setNewCategory(e.target.value)} />
+              </div>
+            </div>
+
             <label style={{ fontWeight: 600, display: 'block', marginBottom: '8px' }}>Video URL (Optional)</label>
             <input type="url" className="input-field" placeholder="e.g. YouTube URL or direct link..." value={newVideoUrl} onChange={e => setNewVideoUrl(e.target.value)} style={{ marginBottom: '24px' }} />
             

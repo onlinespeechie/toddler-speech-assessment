@@ -31,6 +31,9 @@ model Question {
   id                 String           @id @default(cuid())
   text               String
   videoUrl           String?
+  internalCode       String?          @unique
+  category           String?
+  questionType       String?          // e.g. "Scored", "Bridge"
   isTagQuestion      Boolean          @default(false)
   
   options            Option[]
@@ -67,4 +70,17 @@ model Submission {
   contactId  String
   contact    Contact  @relation(fields: [contactId], references: [id])
   createdAt  DateTime @default(now())
+
+  answers    Answer[]
+}
+
+model Answer {
+  id           String     @id @default(cuid())
+  internalCode String?
+  category     String?
+  weight       Int
+  text         String
+  
+  submissionId String
+  submission   Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
 }

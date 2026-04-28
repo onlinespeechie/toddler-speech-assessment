@@ -11,6 +11,7 @@ type Option = {
 type Question = {
   id: string;
   text: string;
+  internalCode?: string | null;
   videoUrl?: string | null;
   options: Option[];
 };
@@ -76,7 +77,7 @@ export default function AssessmentApp() {
   const [tagQuestion, setTagQuestion] = useState<Question | null>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [score, setScore] = useState(0);
-  const [pastAnswers, setPastAnswers] = useState<number[]>([]);
+  const [pastAnswers, setPastAnswers] = useState<{questionCode: string | null, weight: number, text: string}[]>([]);
 
   const [finalTag, setFinalTag] = useState('');
   const [submissionId, setSubmissionId] = useState<string | null>(null);
@@ -102,9 +103,19 @@ export default function AssessmentApp() {
         body: JSON.stringify({ childDoB }),
       });
 
-      const data: AssessmentData = await res.json();
+      const data: AssessmentData & { outOfRange?: boolean; calculated_age_months?: number; error?: string } = await res.json();
       if (!res.ok) {
-        throw new Error((data as any).error || 'Failed to start assessment');
+        if (data.outOfRange) {
+          // @ts-ignore
+          if (typeof window !== 'undefined' && window.dataLayer) {
+            // @ts-ignore
+            window.dataLayer.push({
+              event: 'out_of_range_submission',
+              age: data.calculated_age_months
+            });
+          }
+        }
+        throw new Error(data.error || 'Failed to start assessment');
       }
 
       setSequence(data.sequence);
@@ -118,9 +129,9 @@ export default function AssessmentApp() {
   };
 
   // 2. Process Quiz Answers
-  const handleAnswer = (weight: number) => {
-    setPastAnswers([...pastAnswers, weight]);
-    const newScore = score + weight;
+  const handleAnswer = (option: Option, question: Question) => {
+    setPastAnswers([...pastAnswers, { questionCode: question.internalCode || null, weight: option.weight, text: option.text }]);
+    const newScore = score + option.weight;
     setScore(newScore);
 
     if (sequence && currentQuestionIndex < sequence.placements.length - 1) {
@@ -133,8 +144,8 @@ export default function AssessmentApp() {
 
   const handleBack = () => {
     if (currentQuestionIndex > 0) {
-      const lastWeight = pastAnswers[pastAnswers.length - 1];
-      setScore(score - lastWeight);
+      const lastAnswer = pastAnswers[pastAnswers.length - 1];
+      setScore(score - lastAnswer.weight);
       setPastAnswers(pastAnswers.slice(0, -1));
       setCurrentQuestionIndex(currentQuestionIndex - 1);
     }
@@ -142,8 +153,8 @@ export default function AssessmentApp() {
 
   const handleBackFromTag = () => {
     if (!sequence) return;
-    const lastWeight = pastAnswers[pastAnswers.length - 1];
-    setScore(score - lastWeight);
+    const lastAnswer = pastAnswers[pastAnswers.length - 1];
+    setScore(score - lastAnswer.weight);
     setPastAnswers(pastAnswers.slice(0, -1));
     setCurrentQuestionIndex(sequence.placements.length - 1);
     setStep('quiz');
@@ -177,7 +188,8 @@ export default function AssessmentApp() {
           parentEmail, 
           childDoB,
           totalScore: score,
-          finalTag: finalTag
+          finalTag: finalTag,
+          answers: pastAnswers
         }),
       });
       const data = await res.json();
@@ -229,6 +241,23 @@ export default function AssessmentApp() {
                 {loading ? 'Loading Questions...' : 'Start Check-In'}
               </button>
             </form>
+          </div>
+        )}
+
+        {/* Persistent DoB UI (Visible in Quiz, Final-Tag, Contact) */}
+        {step !== 'age' && step !== 'result' && (
+          <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px 16px', marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Child's Date of Birth</div>
+              <div style={{ fontSize: '1.1rem', fontWeight: 500 }}>{new Date(childDoB).toLocaleDateString()}</div>
+            </div>
+            <button 
+              onClick={() => { setStep('age'); setSequence(null); setScore(0); setPastAnswers([]); setCurrentQuestionIndex(0); }}
+              className="btn btn-secondary"
+              style={{ padding: '8px 16px', fontSize: '0.9rem' }}
+            >
+              Edit
+            </button>
           </div>
         )}
 
@@ -287,7 +316,9 @@ export default function AssessmentApp() {
                       <polygon points="23 7 16 12 23 17 23 7"></polygon>
                       <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
                     </svg>
-                    <span>No video attached.</span>
+                    <span style={{ fontWeight: 600, fontSize: '1.2rem', color: '#64748b' }}>
+                      Vimeo Placeholder ({sequence.placements[currentQuestionIndex].question.internalCode ? `Video ${sequence.placements[currentQuestionIndex].question.internalCode}` : `Video ${currentQuestionIndex + 1}`})
+                    </span>
                   </div>
                 </div>
               )}
@@ -303,7 +334,7 @@ export default function AssessmentApp() {
                     <button 
                       key={option.id}
                       className="option-btn"
-                      onClick={() => handleAnswer(option.weight)}
+                      onClick={() => handleAnswer(option, sequence.placements[currentQuestionIndex].question)}
                       disabled={loading}
                     >
                       {option.text}

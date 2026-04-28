@@ -7,7 +7,7 @@ export async function PUT(req: Request, context: { params: Promise<{ id: string 
     const body = await req.json();
     
     // Check if it's a text update
-    const { text, options, videoUrl } = body;
+    const { text, options, videoUrl, internalCode, category } = body;
 
     if (!text || !Array.isArray(options)) {
       return NextResponse.json({ error: 'Missing full payload' }, { status: 400 });
@@ -20,6 +20,8 @@ export async function PUT(req: Request, context: { params: Promise<{ id: string 
         where: { id },
         data: {
           text,
+          internalCode: internalCode || null,
+          category: category || null,
           videoUrl: videoUrl !== undefined ? videoUrl : undefined,
           options: {
             create: options.map((opt: any) => ({

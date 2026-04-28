@@ -10,15 +10,22 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing Date of Birth' }, { status: 400 });
     }
 
-    // Calculate age in months roughly
+    // Precise age calculation in months (day-of-month anniversary)
     const now = new Date();
     const dob = new Date(childDoB);
+    
     let ageMonths = (now.getFullYear() - dob.getFullYear()) * 12 + (now.getMonth() - dob.getMonth());
     if (now.getDate() < dob.getDate()) {
       ageMonths--;
     }
 
-    if (ageMonths < 0) ageMonths = 0;
+    if (ageMonths < 15 || ageMonths > 44) {
+      return NextResponse.json({ 
+        error: 'Oops! The Online Speechie Screener is only for children aged 15 to 44 months (1 year 3 months to 3 years 8 months)',
+        outOfRange: true,
+        calculated_age_months: ageMonths
+      }, { status: 400 });
+    }
 
     // Fetch the appropriate QuestionSequence
     const sequence = await prisma.questionSequence.findFirst({
