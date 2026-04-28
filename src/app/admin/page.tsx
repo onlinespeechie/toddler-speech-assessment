@@ -264,6 +264,7 @@ export default function AdminPanel() {
                     <div>
                       <h3 style={{ fontSize: '1.2rem', marginBottom: '4px' }}>{q.internalCode ? `[${q.internalCode}] ` : ''}{q.text}</h3>
                       {q.internalCode && <div style={{ marginBottom: '8px', fontSize: '0.85rem', color: '#64748b', fontWeight: 'bold' }}>Code: {q.internalCode} {q.category ? `| Category: ${q.category}` : ''}</div>}
+                      {q.videoUrl && <div style={{ marginBottom: '8px', fontSize: '0.85rem', color: 'var(--primary)' }}>🎥 Video: {q.videoUrl}</div>}
                       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
                         {q.options.map(o => (
                           <span key={o.id} style={{ background: '#E2E2D1', padding: '4px 8px', borderRadius: '4px', fontSize: '0.85rem', fontWeight: 600 }}>
@@ -426,6 +427,7 @@ export default function AdminPanel() {
                     </div>
                     <div>
                       <h3 style={{ fontSize: '1.2rem', marginBottom: '4px' }}>{p.question.internalCode ? `[${p.question.internalCode}] ` : ''}{p.question.text}</h3>
+                      {p.question.videoUrl && <div style={{ marginBottom: '4px', fontSize: '0.85rem', color: 'var(--primary)' }}>🎥 Video: {p.question.videoUrl}</div>}
                       <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>{p.question.options.length} options mapped.</p>
                     </div>
                   </div>
