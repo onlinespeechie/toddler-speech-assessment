@@ -29,7 +29,7 @@ type SequenceData = {
 type AssessmentData = {
   ageMonths: number;
   sequence: SequenceData;
-  tagQuestion: Question;
+  icsSequence: SequenceData;
 };
 
 export default function AssessmentApp() {
@@ -64,7 +64,7 @@ export default function AssessmentApp() {
     } catch(e) { return url; }
   };
 
-  const [step, setStep] = useState<'age' | 'quiz' | 'final-tag' | 'contact' | 'result'>('age');
+  const [step, setStep] = useState<'age' | 'quiz' | 'ics' | 'contact' | 'result'>('age');
   
   const [childDoB, setChildDoB] = useState('');
   const [parentName, setParentName] = useState('');
@@ -74,12 +74,13 @@ export default function AssessmentApp() {
   const [error, setError] = useState('');
 
   const [sequence, setSequence] = useState<SequenceData | null>(null);
-  const [tagQuestion, setTagQuestion] = useState<Question | null>(null);
+  const [icsSequence, setIcsSequence] = useState<SequenceData | null>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [icsIndex, setIcsIndex] = useState(0);
   const [score, setScore] = useState(0);
   const [pastAnswers, setPastAnswers] = useState<{questionCode: string | null, weight: number, text: string}[]>([]);
 
-  const [finalTag, setFinalTag] = useState('');
+  const [submissionResult, setSubmissionResult] = useState<any>(null);
   const [submissionId, setSubmissionId] = useState<string | null>(null);
 
   // 1. Submit DoB only to get Sequence
@@ -119,7 +120,7 @@ export default function AssessmentApp() {
       }
 
       setSequence(data.sequence);
-      setTagQuestion(data.tagQuestion);
+      setIcsSequence(data.icsSequence);
       setStep('quiz');
     } catch (err: any) {
       setError(err.message);
@@ -137,8 +138,18 @@ export default function AssessmentApp() {
     if (sequence && currentQuestionIndex < sequence.placements.length - 1) {
       setCurrentQuestionIndex(currentQuestionIndex + 1);
     } else {
-      // Finished quiz, move to final tag question
-      setStep('final-tag');
+      // Finished main quiz, move to ICS
+      setStep('ics');
+    }
+  };
+
+  const handleIcsAnswer = (option: Option, question: Question) => {
+    setPastAnswers([...pastAnswers, { questionCode: question.internalCode || null, weight: option.weight, text: option.text }]);
+    
+    if (icsSequence && icsIndex < icsSequence.placements.length - 1) {
+      setIcsIndex(icsIndex + 1);
+    } else {
+      setStep('contact');
     }
   };
 
@@ -151,18 +162,19 @@ export default function AssessmentApp() {
     }
   };
 
-  const handleBackFromTag = () => {
-    if (!sequence) return;
-    const lastAnswer = pastAnswers[pastAnswers.length - 1];
-    setScore(score - lastAnswer.weight);
-    setPastAnswers(pastAnswers.slice(0, -1));
-    setCurrentQuestionIndex(sequence.placements.length - 1);
-    setStep('quiz');
-  };
-
-  const handleFinalTagAnswer = (tag: string) => {
-    setFinalTag(tag);
-    setStep('contact');
+  const handleIcsBack = () => {
+    if (icsIndex > 0) {
+      const lastAnswer = pastAnswers[pastAnswers.length - 1];
+      setPastAnswers(pastAnswers.slice(0, -1));
+      setIcsIndex(icsIndex - 1);
+    } else {
+      // Go back to main quiz
+      const lastAnswer = pastAnswers[pastAnswers.length - 1];
+      setScore(score - lastAnswer.weight);
+      setPastAnswers(pastAnswers.slice(0, -1));
+      setCurrentQuestionIndex(sequence ? sequence.placements.length - 1 : 0);
+      setStep('quiz');
+    }
   };
 
   // 3. Final Submit with Parent Info
@@ -188,15 +200,13 @@ export default function AssessmentApp() {
           parentEmail, 
           childDoB,
           totalScore: score,
-          finalTag: finalTag,
           answers: pastAnswers
         }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Submission failed');
       
-      // Update UI with the final tag that we just created
-      setFinalTag(data.submission.finalTag);
+      setSubmissionResult(data.submission);
       setSubmissionId(data.submission.id);
       setStep('result');
     } catch (err: any) {
@@ -252,7 +262,7 @@ export default function AssessmentApp() {
               <div style={{ fontSize: '1.1rem', fontWeight: 500 }}>{new Date(childDoB).toLocaleDateString()}</div>
             </div>
             <button 
-              onClick={() => { setStep('age'); setSequence(null); setScore(0); setPastAnswers([]); setCurrentQuestionIndex(0); }}
+              onClick={() => { setStep('age'); setSequence(null); setIcsSequence(null); setScore(0); setPastAnswers([]); setCurrentQuestionIndex(0); setIcsIndex(0); }}
               className="btn btn-secondary"
               style={{ padding: '8px 16px', fontSize: '0.9rem' }}
             >
@@ -346,37 +356,38 @@ export default function AssessmentApp() {
           </div>
         )}
 
-        {/* Step 2b: Final Tag Question */}
-        {step === 'final-tag' && tagQuestion && (
-          <div className="animate-fade-in card-panel">
+        {/* Step 2b: ICS Questions */}
+        {step === 'ics' && icsSequence && (
+          <div key={icsIndex} className="animate-fade-in card-panel">
+            <div className="progress-bar-bg" style={{ marginBottom: '16px' }}>
+              <div 
+                className="progress-bar-fill" 
+                style={{ width: `${((icsIndex) / icsSequence.placements.length) * 100}%`, background: '#f59e0b' }}
+              />
+            </div>
+
             <button 
-              onClick={handleBackFromTag}
+              onClick={handleIcsBack}
               style={{ background: 'none', border: 'none', color: 'var(--primary)', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '16px', padding: 0 }}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
               Previous Question
             </button>
+
+            <p style={{ color: '#f59e0b', fontWeight: 700, marginBottom: '16px', fontSize: '1rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Speech Clarity ({icsIndex + 1} of {icsSequence.placements.length})
+            </p>
+
             <h2 style={{ fontSize: '1.8rem', marginBottom: '32px', textAlign: 'center' }}>
-              {tagQuestion.text}
+              {icsSequence.placements[icsIndex].question.text}
             </h2>
-            
-            {/* If the single master tag question has its own video attached, render it too! */}
-            {tagQuestion.videoUrl && (
-              <div className="video-container" style={{ marginBottom: '24px' }}>
-                {tagQuestion.videoUrl.includes('youtube.com') || tagQuestion.videoUrl.includes('youtu.be') || tagQuestion.videoUrl.includes('vimeo.com') ? (
-                  <iframe src={getSafeEmbedUrl(tagQuestion.videoUrl)} width="100%" height="100%" frameBorder="0" allow="autoplay; fullscreen" allowFullScreen></iframe>
-                ) : (
-                  <video src={tagQuestion.videoUrl} controls autoPlay width="100%" height="100%" style={{ objectFit: 'cover' }}></video>
-                )}
-              </div>
-            )}
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {tagQuestion.options.map((opt: any) => (
+              {icsSequence.placements[icsIndex].question.options.map((opt: any) => (
                 <button 
                   key={opt.id}
                   className="option-btn"
-                  onClick={() => handleFinalTagAnswer(opt.tagValue || "Unspecified")}
+                  onClick={() => handleIcsAnswer(opt, icsSequence.placements[icsIndex].question)}
                 >
                   {opt.text}
                 </button>
@@ -439,9 +450,22 @@ export default function AssessmentApp() {
             </p>
             
             <div style={{ background: '#fafaf5', border: '2px solid var(--border-color)', borderRadius: '16px', padding: '24px', marginBottom: '32px' }}>
-              <p style={{ color: 'var(--text-muted)', marginBottom: '8px', fontWeight: 600 }}>Identified Primary Area</p>
-              <div className="result-tag" style={{ fontSize: '1.25rem' }}>
-                {finalTag || "Pending Assessment"}
+              <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                <div style={{ background: 'white', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0', flex: '1', minWidth: '200px' }}>
+                  <p style={{ color: 'var(--text-muted)', marginBottom: '4px', fontWeight: 600, fontSize: '0.9rem', textTransform: 'uppercase' }}>Assessment Band</p>
+                  <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--primary)' }}>
+                    {submissionResult?.finalTag || "Completed"}
+                  </div>
+                </div>
+                
+                {submissionResult?.tags?.includes('SPEECH_CLARITY_CONCERN') && (
+                  <div style={{ background: '#fef2f2', padding: '16px', borderRadius: '8px', border: '1px solid #fca5a5', flex: '1', minWidth: '200px' }}>
+                    <p style={{ color: '#b91c1c', marginBottom: '4px', fontWeight: 600, fontSize: '0.9rem', textTransform: 'uppercase' }}>Alert Flag</p>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#991b1b' }}>
+                      Speech Clarity Concern
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 

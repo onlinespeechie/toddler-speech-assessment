@@ -42,17 +42,17 @@ export async function POST(req: Request) {
     } else if (calculatedAge >= 21 && calculatedAge <= 22) {
       if (score <= 15) output1 = 'Delayed'; else if (score <= 30) output1 = 'At Risk';
     } else if (calculatedAge >= 23 && calculatedAge <= 25) {
-      if (score <= 15) output1 = 'Delayed'; else if (score <= 35) output1 = 'At Risk';
+      if (score <= 25) output1 = 'Delayed'; else if (score <= 40) output1 = 'At Risk';
     } else if (calculatedAge >= 26 && calculatedAge <= 28) {
       if (score <= 25) output1 = 'Delayed'; else if (score <= 40) output1 = 'At Risk';
     } else if (calculatedAge >= 29 && calculatedAge <= 31) {
-      if (score <= 30) output1 = 'Delayed'; else if (score <= 45) output1 = 'At Risk';
+      if (score <= 30) output1 = 'Delayed'; else if (score <= 44) output1 = 'At Risk';
     } else if (calculatedAge >= 32 && calculatedAge <= 34) {
-      if (score <= 30) output1 = 'Delayed'; else if (score <= 45) output1 = 'At Risk';
+      if (score <= 25) output1 = 'Delayed'; else if (score <= 35) output1 = 'At Risk';
     } else if (calculatedAge >= 35 && calculatedAge <= 38) {
-      if (score <= 30) output1 = 'Delayed'; else if (score <= 50) output1 = 'At Risk';
+      if (score <= 30) output1 = 'Delayed'; else if (score <= 44) output1 = 'At Risk';
     } else if (calculatedAge >= 39 && calculatedAge <= 44) {
-      if (score <= 35) output1 = 'Delayed'; else if (score <= 50) output1 = 'At Risk';
+      if (score <= 25) output1 = 'Delayed'; else if (score <= 35) output1 = 'At Risk';
     }
 
     let answersToSave: any[] = [];
@@ -99,11 +99,73 @@ export async function POST(req: Request) {
       }
 
       // 4. Comm Stage Waterfall (Output 3)
-      // Check in order: Conversationalist -> Phrase User -> Single Word User -> Engager.
-      // Tiebreaker Rule: If confidence for a stage is 70-89%, check the answer to the Comm Stage Bridge question:
-      // Positive ("Yes" / "Always/Mostly") = Confirm Stage.
-      // Negative ("Not yet" / "Sometimes" / "Rarely") = Drop to next stage.
-      // TODO: Map specific question codes/scores to stages and tiebreakers when data is fully populated.
+      const hasVal = (code: string, values: string[]) => {
+        const found = answers.find((a: any) => a.internalCode && a.internalCode.split('_')[0] === code);
+        if (!found) return false;
+        return values.some(v => found.text && found.text.includes(v));
+      };
+
+      let commStage = "ENGAGER"; // Default Step 4
+
+      // Step 1: Conversationalist
+      const q56_AM = hasVal('Q56', ['Always/Mostly']);
+      const q44_AM = hasVal('Q44', ['Always/Mostly']);
+      const q44_Some = hasVal('Q44', ['Sometimes']);
+      
+      let supp1 = 0;
+      if (hasVal('Q64', ['Always/Mostly', 'Sometimes'])) supp1++;
+      if (hasVal('Q58', ['Always/Mostly'])) supp1++;
+      if (hasVal('Q48', ['Yes']) || hasVal('Q53', ['Yes'])) supp1++;
+      if (hasVal('Q60', ['Yes']) || hasVal('Q62', ['Yes'])) supp1++;
+      if (hasVal('Q64a', ['Always/Mostly'])) supp1++;
+
+      if (q56_AM && q44_AM) {
+        commStage = "CONVERSATIONALIST";
+      } else if (q56_AM && q44_Some && supp1 >= 2) {
+        commStage = "CONVERSATIONALIST";
+      }
+
+      // Step 2: Phrase User
+      if (commStage === "ENGAGER") {
+        let prim2 = 0;
+        if (hasVal('Q42', ['Always/Mostly']) || hasVal('Q52', ['Always/Mostly'])) prim2++;
+        if (hasVal('Q44', ['Always/Mostly', 'Sometimes'])) prim2++;
+        if (hasVal('Q64d', ['Always/Mostly'])) prim2++;
+
+        let supp2 = 0;
+        if (hasVal('Q48', ['Yes']) || hasVal('Q53', ['Yes'])) supp2++;
+        if (hasVal('Q49', ['Yes'])) supp2++;
+        if (hasVal('Q45', ['Always/Mostly', 'Sometimes']) || hasVal('Q55', ['Always/Mostly', 'Sometimes'])) supp2++;
+
+        if (prim2 >= 2) {
+          commStage = "PHRASE USER";
+        } else if (prim2 === 1 && supp2 >= 2) {
+          commStage = "PHRASE USER";
+        }
+      }
+
+      // Step 3: Single Word User
+      if (commStage === "ENGAGER") {
+        let prim3 = 0;
+        if (hasVal('Q41', ['Yes'])) prim3++;
+        if (hasVal('Q49', ['Yes'])) prim3++;
+
+        let supp3 = 0;
+        if (hasVal('Q46', ['Yes']) || hasVal('Q50', ['Yes']) || hasVal('Q54', ['Yes'])) supp3++;
+        if (hasVal('Q43', ['Always/Mostly', 'Sometimes'])) supp3++;
+        if (hasVal('Q47', ['Yes']) || hasVal('Q57', ['Yes'])) supp3++;
+        if (hasVal('Q40', ['Always/Mostly'])) supp3++;
+
+        const q37_Yes = hasVal('Q37', ['Yes']);
+
+        if (prim3 >= 1) {
+          commStage = "SINGLE WORD USER";
+        } else if (q37_Yes && supp3 >= 2) {
+          commStage = "SINGLE WORD USER";
+        }
+      }
+
+      recommendations.push(commStage);
     }
 
     const generatedTag = finalTag || output1;

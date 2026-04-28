@@ -261,7 +261,7 @@ export default function AdminPanel() {
                 {editingQuestionId !== q.id && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div>
-                      <h3 style={{ fontSize: '1.2rem', marginBottom: '4px' }}>{q.text}</h3>
+                      <h3 style={{ fontSize: '1.2rem', marginBottom: '4px' }}>{q.internalCode ? `[${q.internalCode}] ` : ''}{q.text}</h3>
                       {q.internalCode && <div style={{ marginBottom: '8px', fontSize: '0.85rem', color: '#64748b', fontWeight: 'bold' }}>Code: {q.internalCode} {q.category ? `| Category: ${q.category}` : ''}</div>}
                       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
                         {q.options.map(o => (
@@ -424,7 +424,7 @@ export default function AdminPanel() {
                       <button onClick={() => handleReorderPlacement(p.id, 'down')} disabled={pIndex === sequences[activeTab].placements.length - 1} style={{ cursor: pIndex === sequences[activeTab].placements.length - 1 ? 'not-allowed' : 'pointer', background: 'none', border: 'none', fontSize: '1.2rem' }}>▼</button>
                     </div>
                     <div>
-                      <h3 style={{ fontSize: '1.2rem', marginBottom: '4px' }}>{p.question.text}</h3>
+                      <h3 style={{ fontSize: '1.2rem', marginBottom: '4px' }}>{p.question.internalCode ? `[${p.question.internalCode}] ` : ''}{p.question.text}</h3>
                       <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>{p.question.options.length} options mapped.</p>
                     </div>
                   </div>
@@ -442,7 +442,7 @@ export default function AdminPanel() {
             <div style={{ display: 'flex', gap: '16px', marginTop: '16px' }}>
               <select className="input-field" value={selectedBankQuestionId} onChange={e => setSelectedBankQuestionId(e.target.value)}>
                 {bankQuestions.map(q => (
-                  <option key={q.id} value={q.id}>{q.text}</option>
+                  <option key={q.id} value={q.id}>{q.internalCode ? `[${q.internalCode}] ` : ''}{q.text}</option>
                 ))}
               </select>
               <button className="btn btn-primary" onClick={() => handleAssignToSequence(sequences[activeTab].id)}>Assign</button>

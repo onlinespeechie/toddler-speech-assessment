@@ -52,15 +52,25 @@ export async function POST(req: Request) {
       }, { status: 404 });
     }
 
-    const tagQuestion = await prisma.question.findFirst({
-      where: { isTagQuestion: true },
-      include: { options: true }
+    // Fetch the ICS Sequence
+    const icsSequence = await prisma.questionSequence.findUnique({
+      where: { id: 'ICS_SEQUENCE' },
+      include: {
+        placements: {
+          orderBy: { order: 'asc' },
+          include: {
+            question: {
+              include: { options: true }
+            }
+          }
+        }
+      }
     });
 
     return NextResponse.json({
       ageMonths,
       sequence,
-      tagQuestion
+      icsSequence
     });
 
   } catch (error) {
