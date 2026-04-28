@@ -286,10 +286,17 @@ export default function AdminPanel() {
                     <h3 style={{ marginBottom: '16px' }}>Edit Global Question</h3>
                     <input type="text" className="input-field" value={editForm.text} onChange={e => setEditForm({...editForm, text: e.target.value})} style={{ marginBottom: '16px' }} />
                     <div style={{ display: 'flex', gap: '16px', marginBottom: '16px' }}>
-                      <input type="text" className="input-field" placeholder="Internal Code (e.g. Q38, ICS_1)" value={editForm.internalCode} onChange={e => setEditForm({...editForm, internalCode: e.target.value})} style={{ flex: 1 }} />
-                      <input type="text" className="input-field" placeholder="Category (e.g. Expressive)" value={editForm.category} onChange={e => setEditForm({...editForm, category: e.target.value})} style={{ flex: 1 }} />
+                      <div style={{ flex: 1 }}>
+                        <label style={{ fontWeight: 600, display: 'block', marginBottom: '8px', fontSize: '0.9rem' }}>Internal Code</label>
+                        <input type="text" className="input-field" placeholder="Internal Code (e.g. Q38, ICS_1)" value={editForm.internalCode} onChange={e => setEditForm({...editForm, internalCode: e.target.value})} />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <label style={{ fontWeight: 600, display: 'block', marginBottom: '8px', fontSize: '0.9rem' }}>Category</label>
+                        <input type="text" className="input-field" placeholder="Category (e.g. Expressive)" value={editForm.category} onChange={e => setEditForm({...editForm, category: e.target.value})} />
+                      </div>
                     </div>
-                    <input type="url" className="input-field" placeholder="Optional Video URL (e.g. YouTube iframe src, or .mp4 link)" value={editForm.videoUrl} onChange={e => setEditForm({...editForm, videoUrl: e.target.value})} style={{ marginBottom: '16px' }} />
+                    <label style={{ fontWeight: 600, display: 'block', marginBottom: '8px', fontSize: '0.9rem' }}>Video URL (Optional)</label>
+                    <input type="text" className="input-field" placeholder="Optional Video URL (e.g. YouTube iframe src, or .mp4 link)" value={editForm.videoUrl} onChange={e => setEditForm({...editForm, videoUrl: e.target.value})} style={{ marginBottom: '16px' }} />
                     <h4 style={{ marginBottom: '8px', fontSize: '1rem' }}>Options</h4>
                     {editForm.options.map((opt, oIndex) => (
                       <div key={oIndex} style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
@@ -351,6 +358,10 @@ export default function AdminPanel() {
                       <div style={{ marginTop: '8px' }}>
                         <h3 style={{ marginBottom: '16px' }}>Edit Tag Question</h3>
                         <input type="text" className="input-field" value={editForm.text} onChange={e => setEditForm({...editForm, text: e.target.value})} style={{ marginBottom: '16px' }} />
+                        
+                        <label style={{ fontWeight: 600, display: 'block', marginBottom: '8px', fontSize: '0.9rem' }}>Video URL (Optional)</label>
+                        <input type="text" className="input-field" placeholder="Optional Video URL (e.g. YouTube iframe src, or .mp4 link)" value={editForm.videoUrl} onChange={e => setEditForm({...editForm, videoUrl: e.target.value})} style={{ marginBottom: '16px' }} />
+
                         <h4 style={{ marginBottom: '8px', fontSize: '1rem' }}>Options & Tags</h4>
                         
                         {editForm.options.map((opt, oIndex) => (
