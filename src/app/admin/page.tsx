@@ -59,6 +59,12 @@ export default function AdminPanel() {
   const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<{text: string; videoUrl: string; internalCode: string; category: string; options: Option[]}>({ text: '', videoUrl: '', internalCode: '', category: '', options: [] });
 
+  // Authentication State
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authUsername, setAuthUsername] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
+  const [authError, setAuthError] = useState('');
+
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -89,8 +95,22 @@ export default function AdminPanel() {
   };
 
   useEffect(() => {
+    if (sessionStorage.getItem('adminAuth') === 'true') {
+      setIsAuthenticated(true);
+    }
     fetchData();
   }, []);
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (authUsername === 'Admin' && authPassword === 'OnlineSpeechie123!') {
+      setIsAuthenticated(true);
+      sessionStorage.setItem('adminAuth', 'true');
+      setAuthError('');
+    } else {
+      setAuthError('Invalid username or password');
+    }
+  };
 
   // -- BANK BUILDER HANDLERS --
   const handleAddNewOption = () => setNewOptions([...newOptions, { text: '', weight: 0 }]);
@@ -209,7 +229,39 @@ export default function AdminPanel() {
     });
   };
 
-  if (loading) return <div style={{ padding: '40px' }}>Loading admin matrix...</div>;
+  if (!isAuthenticated) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--bg-main)', padding: '20px' }}>
+        <div className="card-panel animate-fade-in" style={{ width: '100%', maxWidth: '400px', textAlign: 'center' }}>
+          <img src="https://onlinespeechie.com/wp-content/uploads/2024/03/os-logo-new.png" alt="Logo" style={{ height: '40px', marginBottom: '24px' }} />
+          <h2 style={{ marginBottom: '24px' }}>Admin Portal</h2>
+          {authError && <p style={{ color: '#ef4444', marginBottom: '16px', fontWeight: 600 }}>{authError}</p>}
+          <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <input 
+              type="text" 
+              placeholder="Username" 
+              className="input-field" 
+              value={authUsername} 
+              onChange={e => setAuthUsername(e.target.value)} 
+            />
+            <input 
+              type="password" 
+              placeholder="Password" 
+              className="input-field" 
+              value={authPassword} 
+              onChange={e => setAuthPassword(e.target.value)} 
+            />
+            <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>Login</button>
+          </form>
+          <div style={{ marginTop: '24px' }}>
+            <a href="/" style={{ color: 'var(--text-muted)', fontSize: '0.9rem', textDecoration: 'none' }}>&larr; Back to Assessment</a>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading) return <div style={{ padding: '40px', textAlign: 'center' }}>Loading Admin Panel...</div>;
 
   return (
     <div style={{ padding: '40px', maxWidth: '1000px', margin: '0 auto', fontFamily: "'Quicksand', sans-serif" }}>
