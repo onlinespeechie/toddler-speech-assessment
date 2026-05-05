@@ -40,7 +40,6 @@ async function main() {
           text: qData.text,
           internalCode: qData.code,
           category: 'Speech Clarity',
-          questionType: 'ICS',
           options: {
             create: optionsData
           }

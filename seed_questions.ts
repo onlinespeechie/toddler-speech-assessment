@@ -83,7 +83,6 @@ async function main() {
           text,
           internalCode: code,
           category: cat,
-          questionType: finalType,
           videoUrl: video.startsWith('http') ? video : null,
           options: {
             create: optionsToCreate

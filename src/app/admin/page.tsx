@@ -127,6 +127,7 @@ export default function AdminPanel() {
       text: q.text,
       videoUrl: q.videoUrl || '',
       category: q.category || '',
+      internalCode: q.internalCode || '',
       options: q.options.map(o => ({ id: o.id, text: o.text, weight: o.weight, tagValue: o.tagValue }))
     });
   };
