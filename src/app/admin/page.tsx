@@ -15,7 +15,6 @@ type Question = {
   videoUrl?: string | null;
   internalCode?: string | null;
   category?: string | null;
-  isTagQuestion?: boolean;
   options: Option[];
   placements?: any[];
 };
@@ -58,7 +57,7 @@ export default function AdminPanel() {
 
   // Editing state (Bank)
   const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState<{text: string; videoUrl: string; internalCode: string; category: string; options: Option[]; isTagQuestion: boolean}>({ text: '', videoUrl: '', internalCode: '', category: '', options: [], isTagQuestion: false });
+  const [editForm, setEditForm] = useState<{text: string; videoUrl: string; internalCode: string; category: string; options: Option[]}>({ text: '', videoUrl: '', internalCode: '', category: '', options: [] });
 
   const fetchData = async () => {
     setLoading(true);
@@ -127,9 +126,7 @@ export default function AdminPanel() {
     setEditForm({
       text: q.text,
       videoUrl: q.videoUrl || '',
-      internalCode: q.internalCode || '',
       category: q.category || '',
-      isTagQuestion: q.isTagQuestion || false,
       options: q.options.map(o => ({ id: o.id, text: o.text, weight: o.weight, tagValue: o.tagValue }))
     });
   };
@@ -257,7 +254,7 @@ export default function AdminPanel() {
           <p style={{ marginBottom: '24px', color: 'var(--text-muted)' }}>Create questions here. You can assign them to sequences in the sequence tabs.</p>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            {bankQuestions.filter(q => !q.isTagQuestion).map((q) => (
+            {bankQuestions.map((q) => (
               <div key={q.id} style={{ border: '2px solid var(--border-color)', padding: '24px', borderRadius: '16px', background: '#fafaf5' }}>
                 {editingQuestionId !== q.id && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -302,11 +299,7 @@ export default function AdminPanel() {
                       <div key={oIndex} style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
                         <input className="input-field" style={{ flex: 2, padding: '8px' }} value={opt.text} onChange={e => handleEditOptionChange(oIndex, 'text', e.target.value)} placeholder="Option text" />
                         
-                        {editForm.isTagQuestion ? (
-                          <input className="input-field" type="text" style={{ flex: 1, padding: '8px' }} value={opt.tagValue || ''} onChange={e => handleEditOptionChange(oIndex, 'tagValue', e.target.value)} placeholder="Tag Value" />
-                        ) : (
-                          <input className="input-field" type="number" style={{ flex: 1, padding: '8px' }} value={opt.weight} onChange={e => handleEditOptionChange(oIndex, 'weight', parseInt(e.target.value))} placeholder="Points" />
-                        )}
+                        <input className="input-field" type="number" style={{ flex: 1, padding: '8px' }} value={opt.weight} onChange={e => handleEditOptionChange(oIndex, 'weight', parseInt(e.target.value))} placeholder="Points" />
 
                         <button onClick={() => handleEditOptionRemove(oIndex)} style={{ background:'transparent', color:'red', border:'none', cursor:'pointer', fontWeight:'bold' }}>✕</button>
                       </div>
@@ -322,70 +315,7 @@ export default function AdminPanel() {
             ))}
           </div>
 
-          {/* Tag Questions Section (Rendered At Bottom of Bank) */}
-          {bankQuestions.filter(q => q.isTagQuestion).length > 0 && (
-            <div style={{ marginTop: '48px', paddingTop: '32px', borderTop: '4px solid var(--border-color)' }}>
-              <h3 style={{ fontSize: '1.5rem', marginBottom: '16px' }}>Master Tag Settings</h3>
-              <p style={{ color: 'var(--text-muted)', marginBottom: '16px' }}>
-                This unique question runs globally at the end of the assessment to test tags safely decoupled from your point brackets!
-              </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                {bankQuestions.filter(q => q.isTagQuestion).map(q => (
-                  <div key={q.id} style={{ background: '#fafaf5', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '24px' }}>
-                    
-                    {/* Display State */}
-                    {editingQuestionId !== q.id && (
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                        <div style={{ flex: 1 }}>
-                          <span style={{ display: 'inline-block', fontSize: '0.8rem', background: 'var(--primary)', padding: '4px 8px', borderRadius: '4px', fontWeight: 'bold', marginBottom: '8px' }}>FINAL TAG QUESTION</span>
-                          <strong style={{ fontSize: '1.25rem', display: 'block', marginBottom: '12px' }}>{q.text}</strong>
-                          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                            {q.options.map(opt => (
-                              <span key={opt.id} style={{ padding: '8px 16px', background: 'white', border: '2px solid var(--border-color)', borderRadius: '8px', fontSize: '0.9rem' }}>
-                                <b>{opt.text}</b> (Tag: {opt.tagValue || 'None'})
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                        <div style={{ display: 'flex', gap: '8px', flexDirection: 'column' }}>
-                          <button className="btn btn-primary" onClick={() => handleStartEdit(q)} style={{ padding: '8px 16px', fontSize: '0.9rem' }}>Edit Tags</button>
-                        </div>
-                      </div>
-                    )}
 
-                    {/* Edit Form */}
-                    {editingQuestionId === q.id && (
-                      <div style={{ marginTop: '8px' }}>
-                        <h3 style={{ marginBottom: '16px' }}>Edit Tag Question</h3>
-                        <input type="text" className="input-field" value={editForm.text} onChange={e => setEditForm({...editForm, text: e.target.value})} style={{ marginBottom: '16px' }} />
-                        
-                        <label style={{ fontWeight: 600, display: 'block', marginBottom: '8px', fontSize: '0.9rem' }}>Video URL (Optional)</label>
-                        <input type="text" className="input-field" placeholder="Optional Video URL (e.g. YouTube iframe src, or .mp4 link)" value={editForm.videoUrl} onChange={e => setEditForm({...editForm, videoUrl: e.target.value})} style={{ marginBottom: '16px' }} />
-
-                        <h4 style={{ marginBottom: '8px', fontSize: '1rem' }}>Options & Tags</h4>
-                        
-                        {editForm.options.map((opt, oIndex) => (
-                          <div key={oIndex} style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
-                            <input className="input-field" style={{ flex: 2, padding: '8px' }} value={opt.text} onChange={e => handleEditOptionChange(oIndex, 'text', e.target.value)} placeholder="Option text" />
-                            <input className="input-field" type="text" style={{ flex: 1, padding: '8px' }} value={opt.tagValue || ''} onChange={e => handleEditOptionChange(oIndex, 'tagValue', e.target.value)} placeholder="Tag Value Output" />
-                            <button onClick={() => handleEditOptionRemove(oIndex)} style={{ background:'transparent', color:'red', border:'none', cursor:'pointer', fontWeight:'bold' }}>✕</button>
-                          </div>
-                        ))}
-                        
-                        <button onClick={handleEditOptionAdd} style={{ background:'transparent', border:'2px dashed var(--border-color)', padding:'8px 16px', borderRadius:'8px', cursor:'pointer', marginBottom:'16px', width:'100%' }}>+ Add Tag Option</button>
-                        
-                        <div style={{ display: 'flex', gap: '16px', justifyContent: 'flex-end', borderTop: '2px solid var(--border-color)', paddingTop: '16px' }}>
-                          <button onClick={() => setEditingQuestionId(null)} style={{ background:'transparent', border:'none', cursor:'pointer' }}>Cancel</button>
-                          <button onClick={handleSaveEdit} className="btn btn-primary" style={{ padding: '8px 24px' }}>Save Changes</button>
-                        </div>
-                      </div>
-                    )}
-                    
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
 
           {/* New Question Builder */}
           <div style={{ marginTop: '48px', paddingTop: '32px', borderTop: '4px solid var(--border-color)' }}>

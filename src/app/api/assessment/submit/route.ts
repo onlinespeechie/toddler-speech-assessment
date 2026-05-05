@@ -10,13 +10,22 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // Precise age calculation in months (day-of-month anniversary)
+    // Precise age calculation in months and days
     const now = new Date();
     const dob = new Date(childDoB);
-    let calculatedAge = (now.getFullYear() - dob.getFullYear()) * 12 + (now.getMonth() - dob.getMonth());
-    if (now.getDate() < dob.getDate()) {
-      calculatedAge--;
+    
+    let ageMonths = (now.getFullYear() - dob.getFullYear()) * 12 + now.getMonth() - dob.getMonth();
+    let ageDays = now.getDate() - dob.getDate();
+    
+    if (ageDays < 0) {
+      ageMonths--;
+      // get days in the previous month
+      const daysInPrevMonth = new Date(now.getFullYear(), now.getMonth(), 0).getDate();
+      ageDays += daysInPrevMonth;
     }
+    
+    // For ConvertKit, we can still send the integer ageMonths
+    let calculatedAge = ageMonths;
 
     let recommendations: string[] = [];
     const expressiveCodes = ['Q37', 'Q40', 'Q41', 'Q42', 'Q44', 'Q45', 'Q46', 'Q47', 'Q48', 'Q49', 'Q50', 'Q51', 'Q52', 'Q53', 'Q55', 'Q56', 'Q58', 'Q60', 'Q62', 'Q64'];
@@ -33,29 +42,38 @@ export async function POST(req: Request) {
     let output1 = 'On Track';
     const score = typeof totalScore === 'number' ? totalScore : 0;
     
-    if (calculatedAge >= 15 && calculatedAge <= 16) {
+    const inRange = (minM: number, minD: number, maxM: number, maxD: number) => {
+      if (ageMonths < minM || ageMonths > maxM) return false;
+      if (ageMonths === minM && ageDays < minD) return false;
+      if (ageMonths === maxM && ageDays > maxD) return false;
+      return true;
+    };
+
+    if (inRange(15, 0, 16, 31)) {
       if (score <= 20) output1 = 'Delayed'; else if (score <= 30) output1 = 'At Risk';
-    } else if (calculatedAge >= 17 && calculatedAge <= 18) {
+    } else if (inRange(17, 0, 18, 31)) {
       if (score <= 15) output1 = 'Delayed'; else if (score <= 30) output1 = 'At Risk';
-    } else if (calculatedAge >= 19 && calculatedAge <= 20) {
+    } else if (inRange(19, 0, 20, 31)) {
       if (score <= 20) output1 = 'Delayed'; else if (score <= 35) output1 = 'At Risk';
-    } else if (calculatedAge >= 21 && calculatedAge <= 22) {
+    } else if (inRange(21, 0, 22, 31)) {
       if (score <= 15) output1 = 'Delayed'; else if (score <= 30) output1 = 'At Risk';
-    } else if (calculatedAge >= 23 && calculatedAge <= 25) {
+    } else if (inRange(23, 0, 25, 15)) {
       if (score <= 25) output1 = 'Delayed'; else if (score <= 40) output1 = 'At Risk';
-    } else if (calculatedAge >= 26 && calculatedAge <= 28) {
+    } else if (inRange(25, 16, 28, 15)) {
       if (score <= 25) output1 = 'Delayed'; else if (score <= 40) output1 = 'At Risk';
-    } else if (calculatedAge >= 29 && calculatedAge <= 31) {
+    } else if (inRange(28, 16, 31, 15)) {
       if (score <= 30) output1 = 'Delayed'; else if (score <= 44) output1 = 'At Risk';
-    } else if (calculatedAge >= 32 && calculatedAge <= 34) {
+    } else if (inRange(31, 16, 34, 15)) {
       if (score <= 25) output1 = 'Delayed'; else if (score <= 35) output1 = 'At Risk';
-    } else if (calculatedAge >= 35 && calculatedAge <= 38) {
+    } else if (inRange(34, 16, 38, 31)) {
       if (score <= 30) output1 = 'Delayed'; else if (score <= 44) output1 = 'At Risk';
-    } else if (calculatedAge >= 39 && calculatedAge <= 44) {
+    } else if (inRange(39, 0, 44, 31)) {
       if (score <= 25) output1 = 'Delayed'; else if (score <= 35) output1 = 'At Risk';
     }
 
     let answersToSave: any[] = [];
+    let commStage = "ENGAGER";
+    let speechClarityConcern = false;
 
     if (answers && Array.isArray(answers)) {
       let expressiveTotal = 0;
@@ -81,9 +99,14 @@ export async function POST(req: Request) {
       const icsAnswers = answers.filter((a: any) => a.questionCode?.startsWith('ICS'));
       if (icsAnswers.length > 0) {
         const icsSum = icsAnswers.reduce((sum: number, a: any) => sum + (a.weight || 0), 0);
-        const icsAvg = icsSum / 7;
-        if (icsAvg < 4.0) {
+        const icsAvg = icsSum / icsAnswers.length; // Use actual length instead of hardcoded 7
+        
+        const ics3 = icsAnswers.find((a: any) => a.questionCode === 'ICS-3');
+        const ics3Score = ics3 ? (ics3.weight || 0) : 5; // Default to 'Always' if missing
+
+        if (icsAvg <= 4.0 || ics3Score <= 3) {
           recommendations.push("SPEECH CLARITY CONCERN");
+          speechClarityConcern = true;
         }
       }
 
@@ -99,43 +122,45 @@ export async function POST(req: Request) {
       }
 
       // 4. Comm Stage Waterfall (Output 3)
+      let commStage = "ENGAGER"; // Default fallback
       const hasVal = (code: string, values: string[]) => {
-        const found = answers.find((a: any) => a.internalCode && a.internalCode.split('_')[0] === code);
+        const found = answers.find((a: any) => a.questionCode && a.questionCode.split('_')[0] === code);
         if (!found) return false;
         return values.some(v => found.text && found.text.includes(v));
       };
 
-      let commStage = "ENGAGER"; // Default Step 4
-
       // Step 1: Conversationalist
-      const q56_AM = hasVal('Q56', ['Always/Mostly']);
-      const q44_AM = hasVal('Q44', ['Always/Mostly']);
-      const q44_Some = hasVal('Q44', ['Sometimes']);
-      
-      let supp1 = 0;
-      if (hasVal('Q64', ['Always/Mostly', 'Sometimes'])) supp1++;
-      if (hasVal('Q58', ['Always/Mostly'])) supp1++;
-      if (hasVal('Q48', ['Yes']) || hasVal('Q53', ['Yes'])) supp1++;
-      if (hasVal('Q60', ['Yes']) || hasVal('Q62', ['Yes'])) supp1++;
-      if (hasVal('Q64a', ['Always/Mostly'])) supp1++;
+      const q56_present = answers.some((a: any) => a.questionCode?.split('_')[0] === 'Q56');
+      if (q56_present) {
+        const q56_AM = hasVal('Q56', ['Always/Mostly', 'Always / Mostly']);
+        const q44_AM = hasVal('Q44', ['Always/Mostly', 'Always / Mostly']);
+        const q44_Some = hasVal('Q44', ['Sometimes']);
+        
+        let supp1 = 0;
+        if (hasVal('Q64', ['Always/Mostly', 'Always / Mostly', 'Sometimes'])) supp1++;
+        if (hasVal('Q58', ['Always/Mostly', 'Always / Mostly'])) supp1++;
+        if (hasVal('Q48', ['Yes']) || hasVal('Q53', ['Yes'])) supp1++;
+        if (hasVal('Q60', ['Yes']) || hasVal('Q62', ['Yes'])) supp1++;
+        if (hasVal('Q67', ['Always/Mostly', 'Always / Mostly'])) supp1++;
 
-      if (q56_AM && q44_AM) {
-        commStage = "CONVERSATIONALIST";
-      } else if (q56_AM && q44_Some && supp1 >= 2) {
-        commStage = "CONVERSATIONALIST";
+        if (q56_AM && q44_AM) {
+          commStage = "CONVERSATIONALIST"; // High confidence
+        } else if (q56_AM && q44_Some && supp1 >= 2) {
+          commStage = "CONVERSATIONALIST"; // Borderline saved by supporting
+        }
       }
 
       // Step 2: Phrase User
       if (commStage === "ENGAGER") {
         let prim2 = 0;
-        if (hasVal('Q42', ['Always/Mostly']) || hasVal('Q52', ['Always/Mostly'])) prim2++;
-        if (hasVal('Q44', ['Always/Mostly', 'Sometimes'])) prim2++;
-        if (hasVal('Q64d', ['Always/Mostly'])) prim2++;
+        if (hasVal('Q42', ['Always/Mostly', 'Always / Mostly']) || hasVal('Q52', ['Always/Mostly', 'Always / Mostly'])) prim2++;
+        if (hasVal('Q44', ['Always/Mostly', 'Always / Mostly', 'Sometimes'])) prim2++;
+        if (hasVal('Q66', ['Always/Mostly', 'Always / Mostly'])) prim2++;
 
         let supp2 = 0;
         if (hasVal('Q48', ['Yes']) || hasVal('Q53', ['Yes'])) supp2++;
         if (hasVal('Q49', ['Yes'])) supp2++;
-        if (hasVal('Q45', ['Always/Mostly', 'Sometimes']) || hasVal('Q55', ['Always/Mostly', 'Sometimes'])) supp2++;
+        if (hasVal('Q45', ['Always/Mostly', 'Always / Mostly', 'Sometimes']) || hasVal('Q55', ['Always/Mostly', 'Always / Mostly', 'Sometimes'])) supp2++;
 
         if (prim2 >= 2) {
           commStage = "PHRASE USER";
@@ -152,9 +177,9 @@ export async function POST(req: Request) {
 
         let supp3 = 0;
         if (hasVal('Q46', ['Yes']) || hasVal('Q50', ['Yes']) || hasVal('Q54', ['Yes'])) supp3++;
-        if (hasVal('Q43', ['Always/Mostly', 'Sometimes'])) supp3++;
+        if (hasVal('Q43', ['Always/Mostly', 'Always / Mostly', 'Sometimes'])) supp3++;
         if (hasVal('Q47', ['Yes']) || hasVal('Q57', ['Yes'])) supp3++;
-        if (hasVal('Q40', ['Always/Mostly'])) supp3++;
+        if (hasVal('Q40', ['Always/Mostly', 'Always / Mostly'])) supp3++;
 
         const q37_Yes = hasVal('Q37', ['Yes']);
 
@@ -165,11 +190,26 @@ export async function POST(req: Request) {
         }
       }
 
+      // Step 4: Engager Sub-Flag
+      if (commStage === "ENGAGER") {
+        const isRarely = (code: string) => {
+          const found = answers.find((a: any) => a.questionCode && a.questionCode.split('_')[0] === code);
+          if (!found) return null;
+          return found.text?.includes('Rarely') || found.text?.includes('Not Yet') || found.text?.includes('Not yet');
+        };
+
+        const r40 = isRarely('Q40');
+        const r38 = isRarely('Q38');
+        const r39 = isRarely('Q39');
+        
+        const engagerChecks = [r40, r38, r39].filter(v => v !== null);
+        if (engagerChecks.length > 0 && engagerChecks.every(v => v === true)) {
+          commStage = "ENGAGER (EARLY COMMUNICATION CONCERN)";
+        }
+      }
+
       recommendations.push(commStage);
     }
-
-    const generatedTag = finalTag || output1;
-    const finalCombinedTag = recommendations.length > 0 ? `${generatedTag} | ${recommendations.join(', ')}` : generatedTag;
 
     // Create Contact and Submission in one go
     const contact = await prisma.contact.create({
@@ -180,8 +220,9 @@ export async function POST(req: Request) {
         submissions: {
           create: {
             totalScore: score,
-            tag: output1,
-            finalTag: finalCombinedTag,
+            overall_score: output1,
+            speech_clarity: speechClarityConcern ? "SPEECH CLARITY CONCERN" : "NO CONCERN",
+            comm_stage: commStage,
             answers: {
               create: answersToSave
             }
@@ -193,22 +234,41 @@ export async function POST(req: Request) {
       }
     });
 
-    // --- CRM Sync ---
+    // --- ConvertKit CRM Sync ---
     try {
-      const crmEndpoint = process.env.CRM_API_URL || 'https://example.com/api/crm-sync';
-      await fetch(crmEndpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          parentEmail,
-          parentName,
-          childDoB,
-          calculatedAge,
-          tag: finalCombinedTag
-        })
-      });
+      const CONVERTKIT_API_KEY = process.env.CONVERTKIT_API_KEY;
+      const CONVERTKIT_FORM_ID = process.env.CONVERTKIT_FORM_ID;
+      
+      if (CONVERTKIT_API_KEY && CONVERTKIT_FORM_ID) {
+        const ckEndpoint = `https://api.convertkit.com/v3/forms/${CONVERTKIT_FORM_ID}/subscribe`;
+        
+        const payload = {
+          api_key: CONVERTKIT_API_KEY,
+          email: parentEmail,
+          first_name: parentName,
+          fields: {
+            childs_date_of_birth: childDoB,
+            overall_score: output1,
+            speech_clarity: speechClarityConcern ? "SPEECH CLARITY CONCERN" : "NO CONCERN",
+            comm_stage: commStage
+          }
+        };
+
+        const ckResponse = await fetch(ckEndpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json; charset=utf-8' },
+          body: JSON.stringify(payload)
+        });
+
+        if (!ckResponse.ok) {
+          const errorData = await ckResponse.text();
+          console.error('ConvertKit API error:', errorData);
+        }
+      } else {
+        console.warn('ConvertKit API Key or Form ID is missing. Please add CONVERTKIT_FORM_ID to .env. Skipping ConvertKit sync.');
+      }
     } catch (crmError) {
-      console.error('CRM Sync failed:', crmError);
+      console.error('ConvertKit Sync failed:', crmError);
     }
 
     return NextResponse.json({

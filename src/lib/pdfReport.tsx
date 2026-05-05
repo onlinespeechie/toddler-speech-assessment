@@ -102,14 +102,21 @@ export const ReportDocument = ({ data }: { data: ReportData }) => {
           </View>
           
           <View style={styles.observationRow}>
-            <Text style={styles.label}>Assessment Path</Text>
-            <Text style={styles.value}>{data.tag}</Text>
+            <Text style={styles.label}>Overall Score</Text>
+            <Text style={styles.value}>{data.overall_score}</Text>
           </View>
 
-          {data.finalTag && (
+          {data.comm_stage && (
             <View style={styles.observationRow}>
-              <Text style={styles.label}>Final Result Tag</Text>
-              <Text style={styles.value}>{data.finalTag}</Text>
+              <Text style={styles.label}>Communication Stage</Text>
+              <Text style={styles.value}>{data.comm_stage}</Text>
+            </View>
+          )}
+
+          {data.speech_clarity && data.speech_clarity !== "NO CONCERN" && (
+            <View style={styles.observationRow}>
+              <Text style={styles.label}>Speech Clarity</Text>
+              <Text style={styles.value}>{data.speech_clarity}</Text>
             </View>
           )}
         </View>

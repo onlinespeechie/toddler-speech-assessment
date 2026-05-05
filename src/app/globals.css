@@ -7,8 +7,8 @@
   --primary-hover: #b97af0;
   --text-main: #333333;
   --text-muted: #666666;
-  --border-color: #E2E2D1;
-  --shadow-color: #A09D7D;
+  --border-color: #BCBCA7;
+  --shadow-color: #BCBCA7;
 }
 
 * {
@@ -36,7 +36,7 @@ h1, h2, h3 {
   border: 2px solid var(--border-color);
   border-radius: 20px;
   padding: 10px;
-  box-shadow: 8px 8px 0px var(--shadow-color);
+  box-shadow: -8px 8px 0px var(--shadow-color);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   margin: 0 auto;
 }
@@ -82,7 +82,7 @@ h1, h2, h3 {
 
 .input-field:focus {
   border-color: var(--primary);
-  box-shadow: 4px 4px 0px rgba(206, 144, 255, 0.4);
+  box-shadow: -4px 4px 0px rgba(206, 144, 255, 0.4);
 }
 
 /* Buttons */
@@ -104,24 +104,51 @@ h1, h2, h3 {
   background-color: var(--primary);
   color: #000;
   border: 2px solid #000;
-  box-shadow: 4px 4px 0px #000;
+  box-shadow: -4px 4px 0px #000;
 }
 
 .btn-primary:hover:not(:disabled) {
-  transform: translate(2px, 2px);
-  box-shadow: 2px 2px 0px #000;
+  transform: translate(-2px, 2px);
+  box-shadow: -2px 2px 0px #000;
 }
 
 .btn-primary:active:not(:disabled) {
-  transform: translate(4px, 4px);
+  transform: translate(-4px, 4px);
   box-shadow: 0px 0px 0px #000;
+}
+
+.btn-start {
+  background-color: #d18aff;
+  color: #f7eb48;
+  border: 2px solid #d18aff;
+  box-shadow: none;
+}
+
+.btn-start:hover:not(:disabled) {
+  background-color: #ffffff;
+  color: #d18aff;
+  border: 2px solid #d18aff;
+  transform: none;
+  box-shadow: none;
 }
 
 .btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
   transform: none !important;
-  box-shadow: 4px 4px 0px #000 !important;
+  box-shadow: -4px 4px 0px #000 !important;
+}
+
+.btn-outline-start {
+  background-color: #ffffff;
+  color: #d18aff;
+  border: 2px solid #d18aff;
+  box-shadow: none;
+}
+
+.btn-outline-start:hover:not(:disabled) {
+  background-color: #fafafa;
+  transform: translateY(-2px);
 }
 
 /* Options List */
@@ -144,7 +171,7 @@ h1, h2, h3 {
   background: #fafaf5;
   border-color: var(--shadow-color);
   transform: translateY(-2px);
-  box-shadow: 4px 4px 0px var(--shadow-color);
+  box-shadow: -4px 4px 0px var(--shadow-color);
 }
 
 /* Question Layout */
@@ -156,7 +183,7 @@ h1, h2, h3 {
 
 @media (min-width: 1024px) {
   .question-layout {
-    flex-direction: row-reverse;
+    flex-direction: row;
     align-items: flex-start;
   }
 }
@@ -232,14 +259,122 @@ h1, h2, h3 {
   border-radius: 99px;
   font-weight: 700;
   border: 2px solid #000;
-  box-shadow: 4px 4px 0px #000;
+  box-shadow: -4px 4px 0px #000;
   margin-top: 16px;
 }
 
-.header-logo {
-  text-align: center;
-  margin-bottom: 24px;
-  font-size: 2.5rem;
-  font-weight: 700;
-  color: var(--text-main);
+/* Site Header */
+.site-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 5%;
+  background-color: #fff;
+  border-bottom: 1px solid var(--border-color);
+  width: 100%;
+  box-sizing: border-box;
+  position: relative;
+  z-index: 100;
+}
+
+.site-header-logo img {
+  height: 48px;
+  width: auto;
+}
+
+.site-header-menu {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: 1;
+  margin-left: 40px;
+}
+
+.site-header-nav {
+  display: flex;
+  gap: 32px;
+  align-items: center;
+}
+
+.site-header-nav a {
+  text-decoration: none;
+  color: #333;
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: color 0.2s ease;
+}
+
+.site-header-nav a:hover {
+  color: var(--primary);
+}
+
+.site-header-right {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+}
+
+.site-header-right a {
+  text-decoration: none;
+  color: #333;
+  font-weight: 600;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: color 0.2s ease;
+}
+
+.site-header-right a:hover {
+  color: var(--primary);
+}
+
+.mobile-menu-toggle {
+  display: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #333;
+  padding: 8px;
+}
+
+@media (max-width: 1023px) {
+  .site-header {
+    flex-wrap: wrap;
+    padding: 16px 20px;
+  }
+  
+  .mobile-menu-toggle {
+    display: block;
+  }
+  
+  .site-header-menu {
+    display: none;
+    flex-direction: column;
+    width: 100%;
+    margin-left: 0;
+    margin-top: 16px;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  
+  .site-header-menu.open {
+    display: flex;
+  }
+  
+  .site-header-nav {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+    width: 100%;
+  }
+  
+  .site-header-right {
+    flex-direction: column;
+    align-items: flex-start;
+    width: 100%;
+    gap: 16px;
+    border-top: 1px solid #eee;
+    padding-top: 16px;
+  }
 }

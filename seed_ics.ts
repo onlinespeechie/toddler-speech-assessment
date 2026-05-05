@@ -3,13 +3,9 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 const icsData = [
-  { code: 'ICS-1', text: 'Do you understand your child?' },
-  { code: 'ICS-2', text: 'Do immediate members of your family understand your child?' },
-  { code: 'ICS-3', text: 'Do extended members of your family understand your child?' },
-  { code: 'ICS-4', text: "Do your child's friends understand your child?" },
-  { code: 'ICS-5', text: 'Do other acquaintances understand your child?' },
-  { code: 'ICS-6', text: "Do your child's teachers understand your child?" },
-  { code: 'ICS-7', text: 'Do strangers understand your child?' },
+  { code: 'ICS-1', text: 'Do you and other family members who live with your child understand what they say?' },
+  { code: 'ICS-2', text: "Do extended family or your child's educators - like grandparents, aunts and uncles, or daycare/kindy/school teachers—understand what they say?" },
+  { code: 'ICS-3', text: 'Do people meeting your child for the first time, like someone at the shops or playground— understand what they say?' },
 ];
 
 const optionsData = [

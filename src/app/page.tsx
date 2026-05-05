@@ -17,6 +17,8 @@ type Question = {
 };
 
 type Placement = {
+  isScored: boolean;
+  questionType?: string | null;
   question: Question;
 };
 
@@ -65,6 +67,7 @@ export default function AssessmentApp() {
   };
 
   const [step, setStep] = useState<'age' | 'quiz' | 'ics' | 'contact' | 'result'>('age');
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   
   const [childDoB, setChildDoB] = useState('');
   const [parentName, setParentName] = useState('');
@@ -76,7 +79,6 @@ export default function AssessmentApp() {
   const [sequence, setSequence] = useState<SequenceData | null>(null);
   const [icsSequence, setIcsSequence] = useState<SequenceData | null>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [icsIndex, setIcsIndex] = useState(0);
   const [score, setScore] = useState(0);
   const [pastAnswers, setPastAnswers] = useState<{questionCode: string | null, weight: number, text: string}[]>([]);
 
@@ -130,24 +132,26 @@ export default function AssessmentApp() {
   };
 
   // 2. Process Quiz Answers
-  const handleAnswer = (option: Option, question: Question) => {
-    setPastAnswers([...pastAnswers, { questionCode: question.internalCode || null, weight: option.weight, text: option.text }]);
-    const newScore = score + option.weight;
-    setScore(newScore);
+  const allPlacements = sequence ? [...sequence.placements, ...(icsSequence ? icsSequence.placements : [])] : [];
 
-    if (sequence && currentQuestionIndex < sequence.placements.length - 1) {
-      setCurrentQuestionIndex(currentQuestionIndex + 1);
-    } else {
-      // Finished main quiz, move to ICS
-      setStep('ics');
-    }
-  };
+  const handleAnswer = (option: Option, placement: Placement) => {
+    const isScored = placement.questionType === 'Scored';
+    const isICS = placement.question.internalCode?.startsWith('ICS');
+    const effectiveWeight = (isScored || isICS) ? option.weight : 0;
 
-  const handleIcsAnswer = (option: Option, question: Question) => {
-    setPastAnswers([...pastAnswers, { questionCode: question.internalCode || null, weight: option.weight, text: option.text }]);
+    setPastAnswers([...pastAnswers, { 
+      questionCode: placement.question.internalCode || null, 
+      weight: effectiveWeight, 
+      text: option.text 
+    }]);
     
-    if (icsSequence && icsIndex < icsSequence.placements.length - 1) {
-      setIcsIndex(icsIndex + 1);
+    // Only add to score if the placement specifically marks it as 'Scored'
+    if (isScored) {
+      setScore(score + option.weight);
+    }
+
+    if (currentQuestionIndex < allPlacements.length - 1) {
+      setCurrentQuestionIndex(currentQuestionIndex + 1);
     } else {
       setStep('contact');
     }
@@ -156,24 +160,12 @@ export default function AssessmentApp() {
   const handleBack = () => {
     if (currentQuestionIndex > 0) {
       const lastAnswer = pastAnswers[pastAnswers.length - 1];
-      setScore(score - lastAnswer.weight);
+      const prevPlacement = allPlacements[currentQuestionIndex - 1];
+      if (prevPlacement.questionType === 'Scored') {
+        setScore(score - lastAnswer.weight);
+      }
       setPastAnswers(pastAnswers.slice(0, -1));
       setCurrentQuestionIndex(currentQuestionIndex - 1);
-    }
-  };
-
-  const handleIcsBack = () => {
-    if (icsIndex > 0) {
-      const lastAnswer = pastAnswers[pastAnswers.length - 1];
-      setPastAnswers(pastAnswers.slice(0, -1));
-      setIcsIndex(icsIndex - 1);
-    } else {
-      // Go back to main quiz
-      const lastAnswer = pastAnswers[pastAnswers.length - 1];
-      setScore(score - lastAnswer.weight);
-      setPastAnswers(pastAnswers.slice(0, -1));
-      setCurrentQuestionIndex(sequence ? sequence.placements.length - 1 : 0);
-      setStep('quiz');
     }
   };
 
@@ -217,10 +209,41 @@ export default function AssessmentApp() {
   };
 
   return (
-    <main style={{ minHeight: '100vh', padding: '40px 10px', display: 'flex', flexDirection: 'column' }}>
-      <div className="header-logo animate-fade-in">
-        Online Speechie
-      </div>
+    <>
+      <header className="site-header">
+        <a href="https://onlinespeechie.com/" className="site-header-logo">
+          <img src="https://onlinespeechie.com/wp-content/uploads/2024/03/os-logo-new.png" alt="Online Speechie" />
+        </a>
+        
+        <button className="mobile-menu-toggle" onClick={() => setIsMenuOpen(!isMenuOpen)}>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+        </button>
+
+        <div className={`site-header-menu ${isMenuOpen ? 'open' : ''}`}>
+          <nav className="site-header-nav">
+            <a href="https://onlinespeechie.com/language-check-in">Late Talker Quiz</a>
+            <a href="https://onlinespeechie.com/programs/">Programs</a>
+            <a href="https://onlinespeechie.com/activity">Activity Library</a>
+            <a href="https://onlinespeechie.com/clinic/">Clinic</a>
+          </nav>
+          <div className="site-header-right">
+            <a href="https://onlinespeechie.com/cart">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
+              $0.00
+            </a>
+            <a href="https://onlinespeechie.com/login">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+              Login
+            </a>
+          </div>
+        </div>
+      </header>
+
+      <main style={{ minHeight: '100vh', padding: '40px 10px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
       
       <div className="card-panel animate-fade-in" style={{ width: '100%', maxWidth: step === 'quiz' ? '1200px' : '600px' }}>
         
@@ -247,8 +270,8 @@ export default function AssessmentApp() {
                 />
               </div>
 
-              <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '16px' }} disabled={loading}>
-                {loading ? 'Loading Questions...' : 'Start Check-In'}
+              <button type="submit" className="btn btn-start" style={{ width: '100%', marginTop: '16px' }} disabled={loading}>
+                {loading ? 'Loading Questions...' : 'Start Check-in'}
               </button>
             </form>
           </div>
@@ -262,7 +285,7 @@ export default function AssessmentApp() {
               <div style={{ fontSize: '1.1rem', fontWeight: 500 }}>{new Date(childDoB).toLocaleDateString()}</div>
             </div>
             <button 
-              onClick={() => { setStep('age'); setSequence(null); setIcsSequence(null); setScore(0); setPastAnswers([]); setCurrentQuestionIndex(0); setIcsIndex(0); }}
+              onClick={() => { setStep('age'); setSequence(null); setIcsSequence(null); setScore(0); setPastAnswers([]); setCurrentQuestionIndex(0); }}
               className="btn btn-secondary"
               style={{ padding: '8px 16px', fontSize: '0.9rem' }}
             >
@@ -271,13 +294,13 @@ export default function AssessmentApp() {
           </div>
         )}
 
-        {/* Step 2: Quiz with Video Layout */}
-        {step === 'quiz' && sequence && (
+        {/* Step 2: Unified Quiz Layout */}
+        {step === 'quiz' && allPlacements.length > 0 && (
           <div key={currentQuestionIndex} className="animate-fade-in">
             <div className="progress-bar-bg" style={{ marginBottom: '16px' }}>
               <div 
                 className="progress-bar-fill" 
-                style={{ width: `${((currentQuestionIndex) / sequence.placements.length) * 100}%` }}
+                style={{ width: `${((currentQuestionIndex) / allPlacements.length) * 100}%` }}
               />
             </div>
             
@@ -292,16 +315,41 @@ export default function AssessmentApp() {
             )}
 
             <p style={{ color: 'var(--text-muted)', fontWeight: 700, marginBottom: '16px', fontSize: '1rem' }}>
-              Question {currentQuestionIndex + 1} of {sequence.placements.length}
+              Question {currentQuestionIndex + 1} of {allPlacements.length}
             </p>
             
             <div className="question-layout">
-              {/* VIDEO SECTION FIRST IN HTML (Will sit on top for mobile/medium, right for desktop due to row-reverse) */}
-              {sequence.placements[currentQuestionIndex].question.videoUrl ? (
+              {/* TEXT SECTION FIRST IN HTML (Will sit on top for mobile/medium, left or right depending on row-reverse) */}
+              <div className="question-content">
+                {allPlacements[currentQuestionIndex].question.internalCode?.startsWith('ICS') && (
+                  <p style={{ color: '#f59e0b', fontWeight: 700, marginBottom: '16px', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Speech Clarity
+                  </p>
+                )}
+                <h2 style={{ fontSize: '1.8rem', marginBottom: '32px', lineHeight: 1.4 }}>
+                  {allPlacements[currentQuestionIndex].question.text}
+                </h2>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {allPlacements[currentQuestionIndex].question.options.map(option => (
+                    <button 
+                      key={option.id}
+                      className="option-btn"
+                      onClick={() => handleAnswer(option, allPlacements[currentQuestionIndex])}
+                      disabled={loading}
+                    >
+                      {option.text}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* VIDEO SECTION SECOND IN HTML */}
+              {allPlacements[currentQuestionIndex].question.videoUrl && allPlacements[currentQuestionIndex].question.videoUrl!.startsWith('http') && (
                 <div className="video-container">
-                  {sequence.placements[currentQuestionIndex].question.videoUrl.includes('youtube.com') || sequence.placements[currentQuestionIndex].question.videoUrl.includes('youtu.be') || sequence.placements[currentQuestionIndex].question.videoUrl.includes('vimeo.com') ? (
+                  {allPlacements[currentQuestionIndex].question.videoUrl!.includes('youtube.com') || allPlacements[currentQuestionIndex].question.videoUrl!.includes('youtu.be') || allPlacements[currentQuestionIndex].question.videoUrl!.includes('vimeo.com') ? (
                     <iframe 
-                      src={getSafeEmbedUrl(sequence.placements[currentQuestionIndex].question.videoUrl)} 
+                      src={getSafeEmbedUrl(allPlacements[currentQuestionIndex].question.videoUrl!)} 
                       width="100%" 
                       height="100%" 
                       frameBorder="0" 
@@ -310,7 +358,7 @@ export default function AssessmentApp() {
                     ></iframe>
                   ) : (
                     <video 
-                      src={sequence.placements[currentQuestionIndex].question.videoUrl} 
+                      src={allPlacements[currentQuestionIndex].question.videoUrl!} 
                       controls 
                       autoPlay
                       width="100%" 
@@ -319,79 +367,7 @@ export default function AssessmentApp() {
                     ></video>
                   )}
                 </div>
-              ) : (
-                <div className="video-placeholder video-container">
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center' }}>
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--primary)' }}>
-                      <polygon points="23 7 16 12 23 17 23 7"></polygon>
-                      <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
-                    </svg>
-                    <span style={{ fontWeight: 600, fontSize: '1.2rem', color: '#64748b' }}>
-                      Vimeo Placeholder ({sequence.placements[currentQuestionIndex].question.internalCode ? `Video ${sequence.placements[currentQuestionIndex].question.internalCode}` : `Video ${currentQuestionIndex + 1}`})
-                    </span>
-                  </div>
-                </div>
               )}
-            
-              {/* TEXT SECTION SECOND IN HTML */}
-              <div className="question-content">
-                <h2 style={{ fontSize: '1.8rem', marginBottom: '32px', lineHeight: 1.4 }}>
-                  {sequence.placements[currentQuestionIndex].question.text}
-                </h2>
-
-                <div>
-                  {sequence.placements[currentQuestionIndex].question.options.map(option => (
-                    <button 
-                      key={option.id}
-                      className="option-btn"
-                      onClick={() => handleAnswer(option, sequence.placements[currentQuestionIndex].question)}
-                      disabled={loading}
-                    >
-                      {option.text}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Step 2b: ICS Questions */}
-        {step === 'ics' && icsSequence && (
-          <div key={icsIndex} className="animate-fade-in card-panel">
-            <div className="progress-bar-bg" style={{ marginBottom: '16px' }}>
-              <div 
-                className="progress-bar-fill" 
-                style={{ width: `${((icsIndex) / icsSequence.placements.length) * 100}%`, background: '#f59e0b' }}
-              />
-            </div>
-
-            <button 
-              onClick={handleIcsBack}
-              style={{ background: 'none', border: 'none', color: 'var(--primary)', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '16px', padding: 0 }}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
-              Previous Question
-            </button>
-
-            <p style={{ color: '#f59e0b', fontWeight: 700, marginBottom: '16px', fontSize: '1rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Speech Clarity ({icsIndex + 1} of {icsSequence.placements.length})
-            </p>
-
-            <h2 style={{ fontSize: '1.8rem', marginBottom: '32px', textAlign: 'center' }}>
-              {icsSequence.placements[icsIndex].question.text}
-            </h2>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {icsSequence.placements[icsIndex].question.options.map((opt: any) => (
-                <button 
-                  key={opt.id}
-                  className="option-btn"
-                  onClick={() => handleIcsAnswer(opt, icsSequence.placements[icsIndex].question)}
-                >
-                  {opt.text}
-                </button>
-              ))}
             </div>
           </div>
         )}
@@ -431,8 +407,8 @@ export default function AssessmentApp() {
                 />
               </div>
 
-              <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '16px' }} disabled={loading}>
-                {loading ? 'Submitting...' : 'See Results'}
+              <button type="submit" className="btn btn-start" style={{ width: '100%', marginTop: '16px' }} disabled={loading}>
+                {loading ? 'Submitting...' : 'Receive Results'}
               </button>
             </form>
           </div>
@@ -446,34 +422,15 @@ export default function AssessmentApp() {
             </div>
             <h1 style={{ fontSize: '2.5rem', marginBottom: '16px' }}>Check-In Complete</h1>
             <p style={{ color: 'var(--text-muted)', fontSize: '1.25rem', marginBottom: '24px' }}>
-              Thank you for completing the Language Check-In!
+              Thank you for completing the Language Check-In!<br /><br />
+              Your results will be sent to the provided email address.
             </p>
-            
-            <div style={{ background: '#fafaf5', border: '2px solid var(--border-color)', borderRadius: '16px', padding: '24px', marginBottom: '32px' }}>
-              <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', justifyContent: 'center' }}>
-                <div style={{ background: 'white', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0', flex: '1', minWidth: '200px' }}>
-                  <p style={{ color: 'var(--text-muted)', marginBottom: '4px', fontWeight: 600, fontSize: '0.9rem', textTransform: 'uppercase' }}>Assessment Band</p>
-                  <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--primary)' }}>
-                    {submissionResult?.finalTag || "Completed"}
-                  </div>
-                </div>
-                
-                {submissionResult?.tags?.includes('SPEECH_CLARITY_CONCERN') && (
-                  <div style={{ background: '#fef2f2', padding: '16px', borderRadius: '8px', border: '1px solid #fca5a5', flex: '1', minWidth: '200px' }}>
-                    <p style={{ color: '#b91c1c', marginBottom: '4px', fontWeight: 600, fontSize: '0.9rem', textTransform: 'uppercase' }}>Alert Flag</p>
-                    <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#991b1b' }}>
-                      Speech Clarity Concern
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
 
             {submissionId && (
               <a 
                 href={`/api/pdf/${submissionId}`} 
                 target="_blank" 
-                className="btn btn-primary" 
+                className="btn btn-start" 
                 style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', textDecoration: 'none', marginBottom: '16px', width: '100%', justifyContent: 'center' }}
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
@@ -481,7 +438,7 @@ export default function AssessmentApp() {
               </a>
             )}
 
-            <button onClick={() => window.location.reload()} className="btn btn-secondary" style={{ width: '100%', background: '#F5F5F5', color: '#333' }}>
+            <button onClick={() => window.location.reload()} className="btn btn-outline-start" style={{ width: '100%' }}>
               Start New Check-In
             </button>
           </div>
@@ -492,5 +449,6 @@ export default function AssessmentApp() {
         <a href="/admin" style={{ color: 'inherit', textDecoration: 'none' }}>Admin Panel</a>
       </div>
     </main>
+    </>
   );
 }
