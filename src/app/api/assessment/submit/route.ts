@@ -122,7 +122,7 @@ export async function POST(req: Request) {
       }
 
       // 4. Comm Stage Waterfall (Output 3)
-      let commStage = "ENGAGER"; // Default fallback
+      commStage = "ENGAGER"; // Default fallback
       const hasVal = (code: string, values: string[]) => {
         const found = answers.find((a: any) => a.questionCode && a.questionCode.split('_')[0] === code);
         if (!found) return false;
