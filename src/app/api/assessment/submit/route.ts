@@ -280,6 +280,32 @@ export async function POST(req: Request) {
             console.error('ConvertKit Tagging API error:', tagErrorData);
           }
         }
+
+        // --- Communication Stage Tagging Logic ---
+        let stageTagId = null;
+        if (commStage === 'ENGAGER' || commStage === 'ENGAGER (EARLY COMMUNICATION CONCERN)') stageTagId = 3672938;
+        else if (commStage === 'SINGLE WORD USER') stageTagId = 3673005;
+        else if (commStage === 'PHRASE USER') stageTagId = 3719653;
+        else if (commStage === 'CONVERSATIONALIST') stageTagId = 3719655;
+
+        if (stageTagId) {
+          const stageTagEndpoint = `https://api.convertkit.com/v3/tags/${stageTagId}/subscribe`;
+          const tagPayload = {
+            api_key: CONVERTKIT_API_KEY,
+            email: parentEmail
+          };
+          
+          const stageTagResponse = await fetch(stageTagEndpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json; charset=utf-8' },
+            body: JSON.stringify(tagPayload)
+          });
+
+          if (!stageTagResponse.ok) {
+            const stageTagErrorData = await stageTagResponse.text();
+            console.error('ConvertKit Stage Tagging API error:', stageTagErrorData);
+          }
+        }
       } else {
         console.warn('ConvertKit API Key or Form ID is missing. Please add CONVERTKIT_FORM_ID to .env. Skipping ConvertKit sync.');
       }
