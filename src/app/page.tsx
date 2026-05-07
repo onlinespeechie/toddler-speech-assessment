@@ -109,13 +109,21 @@ export default function AssessmentApp() {
       const data: AssessmentData & { outOfRange?: boolean; calculated_age_months?: number; error?: string } = await res.json();
       if (!res.ok) {
         if (data.outOfRange) {
-          // @ts-ignore
-          if (typeof window !== 'undefined' && window.dataLayer) {
-            // @ts-ignore
-            window.dataLayer.push({
+          if (typeof window !== 'undefined') {
+            const eventData = {
               event: 'out_of_range_submission',
               age: data.calculated_age_months
-            });
+            };
+            
+            // Push to local dataLayer (if available)
+            if ((window as any).dataLayer) {
+              (window as any).dataLayer.push(eventData);
+            }
+            
+            // Push to parent window for GTM to catch (if in iframe)
+            if (window.parent !== window) {
+              window.parent.postMessage(eventData, '*');
+            }
           }
         }
         throw new Error(data.error || 'Failed to start assessment');
