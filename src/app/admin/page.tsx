@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 
 type Option = {
   id?: string;
@@ -265,7 +266,12 @@ export default function AdminPanel() {
 
   return (
     <div style={{ padding: '40px', maxWidth: '1000px', margin: '0 auto', fontFamily: "'Quicksand', sans-serif" }}>
-      <h1 style={{ fontSize: '2.5rem', marginBottom: '8px' }}>Admin Dashboard</h1>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+        <h1 style={{ fontSize: '2.5rem', margin: 0 }}>Admin Dashboard</h1>
+        <Link href="/admin/submissions" className="btn btn-primary" style={{ textDecoration: 'none', padding: '8px 16px' }}>
+          View Submissions
+        </Link>
+      </div>
       <p style={{ marginBottom: '32px', color: 'var(--text-muted)' }}>Universal Question Bank & Sequence Mapping.</p>
 
       {/* Tabs */}

@@ -16,8 +16,7 @@ export async function GET(
     }
 
     const submissionData = await prisma.submission.findUnique({
-      where: { id: submissionId },
-      include: { contact: true }
+      where: { id: submissionId }
     });
 
     if (!submissionData) {

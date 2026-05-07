@@ -80,7 +80,7 @@ export default function AssessmentApp() {
   const [icsSequence, setIcsSequence] = useState<SequenceData | null>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [score, setScore] = useState(0);
-  const [pastAnswers, setPastAnswers] = useState<{questionCode: string | null, weight: number, text: string}[]>([]);
+  const [pastAnswers, setPastAnswers] = useState<{questionCode: string | null, questionId: string, questionText: string, weight: number, text: string}[]>([]);
 
   const [submissionResult, setSubmissionResult] = useState<any>(null);
   const [submissionId, setSubmissionId] = useState<string | null>(null);
@@ -149,6 +149,8 @@ export default function AssessmentApp() {
 
     setPastAnswers([...pastAnswers, { 
       questionCode: placement.question.internalCode || null, 
+      questionId: placement.question.id,
+      questionText: placement.question.text,
       weight: effectiveWeight, 
       text: option.text 
     }]);
@@ -254,7 +256,7 @@ export default function AssessmentApp() {
         {/* Step 1: Getting DoB */}
         {step === 'age' && (
           <div>
-            <h1 style={{ marginBottom: '16px', fontSize: '2rem' }}>Language Check-In</h1>
+            <h1 style={{ marginBottom: '16px', fontSize: '2rem' }}>Late Talker Quiz</h1>
             <p style={{ color: 'var(--text-muted)', marginBottom: '32px', fontSize: '1.1rem' }}>
               Let's find out exactly where your child is at. To begin, please enter your child's date of birth.
             </p>
@@ -426,7 +428,7 @@ export default function AssessmentApp() {
             </div>
             <h1 style={{ fontSize: '2.5rem', marginBottom: '16px' }}>Check-In Complete</h1>
             <p style={{ color: 'var(--text-muted)', fontSize: '1.25rem', marginBottom: '24px' }}>
-              Thank you for completing the Language Check-In!<br /><br />
+              Thank you for completing the Late Talker Quiz!<br /><br />
               Your results will be sent to the provided email address.
             </p>
 

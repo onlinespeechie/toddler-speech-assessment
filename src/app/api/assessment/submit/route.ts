@@ -84,10 +84,9 @@ export async function POST(req: Request) {
         if (cat === 'Expressive') expressiveTotal += (a.weight || 0);
         if (cat === 'Comprehension') comprehensionTotal += (a.weight || 0);
         return {
-          internalCode: a.questionCode || null,
-          category: cat,
-          weight: a.weight || 0,
-          text: a.text || 'Unknown'
+          questionId: a.questionId || 'Unknown',
+          questionText: a.questionText || 'Unknown',
+          value: a.text || 'Unknown'
         };
       });
 
@@ -211,26 +210,18 @@ export async function POST(req: Request) {
       recommendations.push(commStage);
     }
 
-    // Create Contact and Submission in one go
-    const contact = await prisma.contact.create({
+    const submission = await prisma.submission.create({
       data: {
         parentName,
         parentEmail,
-        childDoB: new Date(childDoB),
-        submissions: {
-          create: {
-            totalScore: score,
-            overall_score: output1,
-            speech_clarity: speechClarityConcern ? "SPEECH CLARITY CONCERN" : "NO CONCERN",
-            comm_stage: commStage,
-            answers: {
-              create: answersToSave
-            }
-          }
+        childDob: new Date(childDoB),
+        totalScore: score,
+        scoreStatus: output1,
+        speechClarity: speechClarityConcern ? "SPEECH CLARITY CONCERN" : "NO CONCERN",
+        communicationStage: commStage,
+        answers: {
+          create: answersToSave
         }
-      },
-      include: {
-        submissions: true,
       }
     });
 
@@ -264,6 +255,31 @@ export async function POST(req: Request) {
           const errorData = await ckResponse.text();
           console.error('ConvertKit API error:', errorData);
         }
+
+        // --- Tagging Logic ---
+        let tagId = null;
+        if (output1 === 'Delayed') tagId = 3672935;
+        else if (output1 === 'At Risk') tagId = 3672943;
+        else if (output1 === 'On Track') tagId = 3672966;
+
+        if (tagId) {
+          const tagEndpoint = `https://api.convertkit.com/v3/tags/${tagId}/subscribe`;
+          const tagPayload = {
+            api_key: CONVERTKIT_API_KEY,
+            email: parentEmail
+          };
+
+          const tagResponse = await fetch(tagEndpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json; charset=utf-8' },
+            body: JSON.stringify(tagPayload)
+          });
+
+          if (!tagResponse.ok) {
+            const tagErrorData = await tagResponse.text();
+            console.error('ConvertKit Tagging API error:', tagErrorData);
+          }
+        }
       } else {
         console.warn('ConvertKit API Key or Form ID is missing. Please add CONVERTKIT_FORM_ID to .env. Skipping ConvertKit sync.');
       }
@@ -273,7 +289,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       success: true,
-      submission: contact.submissions[0],
+      submission: submission,
     });
 
   } catch (error) {

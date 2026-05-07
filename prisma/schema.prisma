@@ -8,16 +8,6 @@ generator client {
   provider = "prisma-client-js"
 }
 
-model Contact {
-  id          String   @id @default(cuid())
-  parentName  String
-  parentEmail String
-  childDoB    DateTime
-  createdAt   DateTime @default(now())
-
-  submissions Submission[]
-}
-
 model QuestionSequence {
   id        String   @id @default(cuid())
   title     String   // e.g. "0-12 months"
@@ -63,25 +53,25 @@ model Option {
 }
 
 model Submission {
-  id         String   @id @default(cuid())
-  totalScore     Int
-  overall_score  String   @default("Unknown")
-  speech_clarity String?
-  comm_stage     String?
-  contactId      String
-  contact        Contact  @relation(fields: [contactId], references: [id])
-  createdAt      DateTime @default(now())
-
-  answers    Answer[]
+  id                 String   @id @default(cuid())
+  createdAt          DateTime @default(now())
+  parentName         String   @default("Unknown")
+  parentEmail        String   @default("Unknown")
+  childDob           DateTime @default(now())
+  totalScore         Int      @default(0)
+  scoreStatus        String   @default("Unknown")
+  communicationStage String   @default("Unknown")
+  speechClarity      String?
+  answers            Answer[]
 }
 
 model Answer {
   id           String     @id @default(cuid())
-  internalCode String?
-  category     String?
-  weight       Int
-  text         String
-  
+  questionId   String     @default("Unknown")
+  questionText String     @default("Unknown")
+  value        String     @default("Unknown")
   submissionId String
   submission   Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@index([submissionId])
 }

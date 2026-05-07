@@ -1,6 +1,6 @@
 import React from 'react';
 import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
-import { Submission, Contact } from '@prisma/client';
+import { Submission } from '@prisma/client';
 
 const styles = StyleSheet.create({
   page: {
@@ -70,7 +70,7 @@ const styles = StyleSheet.create({
   }
 });
 
-type ReportData = Submission & { contact: Contact };
+type ReportData = Submission;
 
 export const ReportDocument = ({ data }: { data: ReportData }) => {
   const guidanceText = data.totalScore < 15 
@@ -82,13 +82,13 @@ export const ReportDocument = ({ data }: { data: ReportData }) => {
       <Page style={styles.page}>
         <View style={styles.headerRow}>
           <View style={styles.titleCol}>
-            <Text style={styles.title}>Language Check-In</Text>
+            <Text style={styles.title}>Late Talker Quiz</Text>
             <Text style={styles.subtitle}>Assessment Report</Text>
           </View>
           <View style={styles.profileCol}>
             <Text style={styles.label}>Child Profile</Text>
-            <Text>{data.contact.parentName}'s Child</Text>
-            <Text>DoB: {new Date(data.contact.childDoB).toLocaleDateString()}</Text>
+            <Text>{data.parentName}'s Child</Text>
+            <Text>DoB: {new Date(data.childDob).toLocaleDateString()}</Text>
             <Text style={{ marginTop: 8, color: '#666' }}>{new Date(data.createdAt).toLocaleDateString()}</Text>
           </View>
         </View>
@@ -103,20 +103,20 @@ export const ReportDocument = ({ data }: { data: ReportData }) => {
           
           <View style={styles.observationRow}>
             <Text style={styles.label}>Overall Score</Text>
-            <Text style={styles.value}>{data.overall_score}</Text>
+            <Text style={styles.value}>{data.scoreStatus}</Text>
           </View>
 
-          {data.comm_stage && (
+          {data.communicationStage && (
             <View style={styles.observationRow}>
               <Text style={styles.label}>Communication Stage</Text>
-              <Text style={styles.value}>{data.comm_stage}</Text>
+              <Text style={styles.value}>{data.communicationStage}</Text>
             </View>
           )}
 
-          {data.speech_clarity && data.speech_clarity !== "NO CONCERN" && (
+          {data.speechClarity && data.speechClarity !== "NO CONCERN" && (
             <View style={styles.observationRow}>
               <Text style={styles.label}>Speech Clarity</Text>
-              <Text style={styles.value}>{data.speech_clarity}</Text>
+              <Text style={styles.value}>{data.speechClarity}</Text>
             </View>
           )}
         </View>
