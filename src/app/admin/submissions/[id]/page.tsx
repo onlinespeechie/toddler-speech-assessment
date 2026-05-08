@@ -48,30 +48,42 @@ export default async function SubmissionDetailPage({ params }: { params: Promise
       </div>
 
       <h2 style={{ fontSize: '1.8rem', marginBottom: '24px' }}>Answers</h2>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-        {submission.answers.map((answer) => (
-          <div key={answer.id} className="card-panel" style={{ padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ flex: '1', paddingRight: '24px' }}>
-              <p style={{ fontSize: '1.1rem', fontWeight: 500 }}>
+      <div className="card-panel" style={{ padding: 0, overflow: 'hidden' }}>
+        {submission.answers.map((answer, index) => (
+          <div key={answer.id} style={{ 
+            padding: '20px', 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center',
+            borderBottom: index < submission.answers.length - 1 ? '1px solid #e2e8f0' : 'none'
+          }}>
+            <div style={{ flex: '1', paddingRight: '24px', display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+              <span style={{ color: 'var(--text-muted)', fontWeight: 600, fontSize: '1.1rem', minWidth: '24px', paddingTop: '1px' }}>
+                {index + 1}.
+              </span>
+              <p style={{ fontSize: '1.1rem', fontWeight: 500, margin: 0 }}>
                 {answer.questionText}
               </p>
             </div>
-            <div style={{ flexShrink: 0, textAlign: 'right' }}>
-              <span style={{ 
+            <div style={{ flexShrink: 0, width: '180px' }}>
+              <div style={{ 
                 background: '#f8fafc', 
                 border: '1px solid #e2e8f0', 
-                padding: '8px 16px', 
+                padding: '8px 12px', 
                 borderRadius: '8px', 
                 fontSize: '1rem', 
-                fontWeight: 700 
+                fontWeight: 700,
+                textAlign: 'center',
+                width: '100%',
+                boxSizing: 'border-box'
               }}>
                 {answer.value}
-              </span>
+              </div>
             </div>
           </div>
         ))}
         {submission.answers.length === 0 && (
-          <div className="card-panel" style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>
+          <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>
             No answers recorded for this submission.
           </div>
         )}
