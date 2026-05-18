@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import ResultsPage from '../components/ResultsPage';
 
 type Option = {
   id: string;
@@ -251,7 +252,8 @@ export default function AssessmentApp() {
 
       <main style={{ minHeight: '100vh', paddingTop: '80px', paddingBottom: '40px', paddingLeft: '10px', paddingRight: '10px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
       
-      <div className="card-panel animate-fade-in" style={{ width: '100%', maxWidth: step === 'quiz' ? '1200px' : '600px' }}>
+      {step !== 'result' ? (
+        <div className="card-panel animate-fade-in" style={{ width: '100%', maxWidth: step === 'quiz' ? '1200px' : '600px' }}>
         
         {/* Step 1: Getting DoB */}
         {step === 'age' && (
@@ -273,6 +275,7 @@ export default function AssessmentApp() {
                   onChange={e => setChildDoB(e.target.value)}
                   disabled={loading}
                   max={new Date().toISOString().split('T')[0]}
+                  suppressHydrationWarning
                 />
               </div>
 
@@ -284,11 +287,11 @@ export default function AssessmentApp() {
         )}
 
         {/* Persistent DoB UI (Visible in Quiz, Final-Tag, Contact) */}
-        {step !== 'age' && step !== 'result' && (
+        {step !== 'age' && (
           <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px 16px', marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
               <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Child's Date of Birth</div>
-              <div style={{ fontSize: '1.1rem', fontWeight: 500 }}>{new Date(childDoB).toLocaleDateString()}</div>
+              <div suppressHydrationWarning style={{ fontSize: '1.1rem', fontWeight: 500 }}>{childDoB ? new Date(childDoB).toLocaleDateString() : ''}</div>
             </div>
             <button 
               onClick={() => { setStep('age'); setSequence(null); setIcsSequence(null); setScore(0); setPastAnswers([]); setCurrentQuestionIndex(0); }}
@@ -420,37 +423,16 @@ export default function AssessmentApp() {
           </div>
         )}
 
-        {/* Step 4: Final Results */}
-        {step === 'result' && (
-          <div style={{ textAlign: 'center' }} className="animate-fade-in">
-            <div style={{ fontSize: '4rem', marginBottom: '16px', display: 'flex', justifyContent: 'center' }}>
-              🌟
-            </div>
-            <h1 style={{ fontSize: '2.5rem', marginBottom: '16px' }}>Check-In Complete</h1>
-            <p style={{ color: 'var(--text-muted)', fontSize: '1.25rem', marginBottom: '24px' }}>
-              Thank you for completing the Late Talker Quiz!<br /><br />
-              Your results will be sent to the provided email address.
-            </p>
+        </div>
+      ) : (
+        submissionResult && (
+          <ResultsPage 
+            submissionResult={submissionResult} 
+            onRestart={() => window.location.reload()} 
+          />
+        )
+      )}
 
-            {submissionId && (
-              <a 
-                href={`/api/pdf/${submissionId}`} 
-                target="_blank" 
-                className="btn btn-start" 
-                style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', textDecoration: 'none', marginBottom: '16px', width: '100%', justifyContent: 'center' }}
-              >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                Download PDF Report
-              </a>
-            )}
-
-            <button onClick={() => window.location.reload()} className="btn btn-outline-start" style={{ width: '100%' }}>
-              Start New Check-In
-            </button>
-          </div>
-        )}
-
-      </div>
       <div style={{ marginTop: 'auto', paddingTop: '40px', fontSize: '0.9rem', color: 'var(--text-muted)' }}>
         <a href="/admin" style={{ color: 'inherit', textDecoration: 'none' }}>Admin Panel</a>
       </div>
