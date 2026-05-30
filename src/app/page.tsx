@@ -67,12 +67,44 @@ export default function AssessmentApp() {
     } catch(e) { return url; }
   };
 
+  const calculateAgeDetail = (dobString: string) => {
+    if (!dobString) return null;
+    const dob = new Date(dobString);
+    if (isNaN(dob.getTime())) return null;
+    const today = new Date();
+    
+    if (dob > today) return "Date of birth cannot be in the future";
+    
+    let years = today.getFullYear() - dob.getFullYear();
+    let months = today.getMonth() - dob.getMonth();
+    let days = today.getDate() - dob.getDate();
+    
+    if (days < 0) {
+      const prevMonth = new Date(today.getFullYear(), today.getMonth(), 0);
+      days += prevMonth.getDate();
+      months--;
+    }
+    
+    if (months < 0) {
+      months += 12;
+      years--;
+    }
+    
+    const parts = [];
+    if (years > 0) parts.push(`${years} ${years === 1 ? 'year' : 'years'}`);
+    if (months > 0) parts.push(`${months} ${months === 1 ? 'month' : 'months'}`);
+    if (days > 0 || parts.length === 0) parts.push(`${days} ${days === 1 ? 'day' : 'days'}`);
+    
+    return `Age calculated: ${parts.join(', ')}`;
+  };
+
   const [step, setStep] = useState<'age' | 'quiz' | 'ics' | 'contact' | 'result'>('age');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   
   const [childDoB, setChildDoB] = useState('');
   const [parentName, setParentName] = useState('');
   const [parentEmail, setParentEmail] = useState('');
+  const [agreeConsent, setAgreeConsent] = useState(false);
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -187,6 +219,10 @@ export default function AssessmentApp() {
       setError('Please fill out your contact details');
       return;
     }
+    if (!agreeConsent) {
+      setError('You must agree to the processing of your personal data and Terms and Conditions to proceed.');
+      return;
+    }
     setLoading(true);
     setError('');
     
@@ -236,7 +272,7 @@ export default function AssessmentApp() {
 
         <div className={`site-header-menu ${isMenuOpen ? 'open' : ''}`}>
           <nav className="site-header-nav">
-            <a href="https://onlinespeechie.com/language-check-in">Late Talker Quiz</a>
+            <a href="https://onlinespeechie.com/language-quiz">Late Talker Quiz™</a>
             <a href="https://onlinespeechie.com/programs/">Programs</a>
             <a href="https://onlinespeechie.com/activity">Activity Library</a>
             <a href="https://onlinespeechie.com/clinic/">Clinic</a>
@@ -250,7 +286,7 @@ export default function AssessmentApp() {
         </div>
       </header>
 
-      <main style={{ minHeight: '100vh', paddingTop: '80px', paddingBottom: '40px', paddingLeft: '10px', paddingRight: '10px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+      <main className="main-layout">
       
       {step !== 'result' ? (
         <div className="card-panel animate-fade-in" style={{ width: '100%', maxWidth: step === 'quiz' ? '1200px' : '600px' }}>
@@ -279,8 +315,31 @@ export default function AssessmentApp() {
                 />
               </div>
 
+              {childDoB && (
+                <div 
+                  className="dev-debug-element"
+                  style={{
+                    marginTop: '8px',
+                    marginBottom: '16px',
+                    padding: '12px',
+                    backgroundColor: '#fee2e2',
+                    border: '2px dashed #ef4444',
+                    borderRadius: '8px',
+                    color: '#991b1b',
+                    fontSize: '0.95rem',
+                    fontWeight: 600,
+                    textAlign: 'center'
+                  }}
+                >
+                  <span style={{ textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '0.05em', color: '#ef4444', display: 'block', marginBottom: '4px' }}>
+                    [DEV/TEST DEBUG ELEMENT]
+                  </span>
+                  {calculateAgeDetail(childDoB)}
+                </div>
+              )}
+
               <button type="submit" className="btn btn-start" style={{ width: '100%', marginTop: '16px' }} disabled={loading}>
-                {loading ? 'Loading Questions...' : 'Start Check-in'}
+                {loading ? 'Loading Questions...' : 'Start Quiz'}
               </button>
             </form>
           </div>
@@ -288,7 +347,7 @@ export default function AssessmentApp() {
 
         {/* Persistent DoB UI (Visible in Quiz, Final-Tag, Contact) */}
         {step !== 'age' && (
-          <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px 16px', marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div className="dob-card" style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
               <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Child's Date of Birth</div>
               <div suppressHydrationWarning style={{ fontSize: '1.1rem', fontWeight: 500 }}>{childDoB ? new Date(childDoB).toLocaleDateString() : ''}</div>
@@ -330,12 +389,7 @@ export default function AssessmentApp() {
             <div className="question-layout">
               {/* TEXT SECTION FIRST IN HTML (Will sit on top for mobile/medium, left or right depending on row-reverse) */}
               <div className="question-content">
-                {allPlacements[currentQuestionIndex].question.internalCode?.startsWith('ICS') && (
-                  <p style={{ color: '#f59e0b', fontWeight: 700, marginBottom: '16px', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    Speech Clarity
-                  </p>
-                )}
-                <h2 style={{ fontSize: '1.8rem', marginBottom: '32px', lineHeight: 1.4 }}>
+                <h2 className="question-text">
                   {allPlacements[currentQuestionIndex].question.text}
                 </h2>
 
@@ -355,26 +409,31 @@ export default function AssessmentApp() {
 
               {/* VIDEO SECTION SECOND IN HTML */}
               {allPlacements[currentQuestionIndex].question.videoUrl && allPlacements[currentQuestionIndex].question.videoUrl!.startsWith('http') && (
-                <div className="video-container">
-                  {allPlacements[currentQuestionIndex].question.videoUrl!.includes('youtube.com') || allPlacements[currentQuestionIndex].question.videoUrl!.includes('youtu.be') || allPlacements[currentQuestionIndex].question.videoUrl!.includes('vimeo.com') ? (
-                    <iframe 
-                      src={getSafeEmbedUrl(allPlacements[currentQuestionIndex].question.videoUrl!)} 
-                      width="100%" 
-                      height="100%" 
-                      frameBorder="0" 
-                      allow="autoplay; fullscreen"
-                      allowFullScreen
-                    ></iframe>
-                  ) : (
-                    <video 
-                      src={allPlacements[currentQuestionIndex].question.videoUrl!} 
-                      controls 
-                      autoPlay
-                      width="100%" 
-                      height="100%"
-                      style={{ objectFit: 'cover' }}
-                    ></video>
-                  )}
+                <div className="video-section-wrapper">
+                  <span style={{ fontSize: '15px', color: '#666666', fontWeight: 500, display: 'block', marginBottom: '4px' }}>
+                    Watch the video to answer accurately
+                  </span>
+                  <div className="video-container">
+                    {allPlacements[currentQuestionIndex].question.videoUrl!.includes('youtube.com') || allPlacements[currentQuestionIndex].question.videoUrl!.includes('youtu.be') || allPlacements[currentQuestionIndex].question.videoUrl!.includes('vimeo.com') ? (
+                      <iframe 
+                        src={getSafeEmbedUrl(allPlacements[currentQuestionIndex].question.videoUrl!)} 
+                        width="100%" 
+                        height="100%" 
+                        frameBorder="0" 
+                        allow="autoplay; fullscreen"
+                        allowFullScreen
+                      ></iframe>
+                    ) : (
+                      <video 
+                        src={allPlacements[currentQuestionIndex].question.videoUrl!} 
+                        controls 
+                        autoPlay
+                        width="100%" 
+                        height="100%"
+                        style={{ objectFit: 'cover' }}
+                      ></video>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
@@ -385,8 +444,8 @@ export default function AssessmentApp() {
         {step === 'contact' && (
           <div className="animate-fade-in">
             <h1 style={{ marginBottom: '12px', fontSize: '2rem' }}>Almost Done!</h1>
-            <p style={{ color: 'var(--text-muted)', marginBottom: '32px', fontSize: '1.1rem' }}>
-              We've calculated your child's progress profile. Please enter your contact details to view the results.
+            <p className="contact-subheading" style={{ color: 'var(--text-muted)', fontSize: '1.1rem' }}>
+              Your child's communication profile is ready. Enter your details below to unlock your results.
             </p>
 
             {error && <div style={{ color: '#ef4444', marginBottom: '16px', fontWeight: 600 }}>{error}</div>}
@@ -416,7 +475,27 @@ export default function AssessmentApp() {
                 />
               </div>
 
-              <button type="submit" className="btn btn-start" style={{ width: '100%', marginTop: '16px' }} disabled={loading}>
+              <div className="consent-checkbox-group" style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', marginTop: '24px', marginBottom: '24px' }}>
+                <input 
+                  type="checkbox" 
+                  id="consent-checkbox"
+                  checked={agreeConsent}
+                  onChange={e => setAgreeConsent(e.target.checked)}
+                  disabled={loading}
+                  style={{ marginTop: '4px', cursor: 'pointer', width: '18px', height: '18px', flexShrink: 0 }}
+                  required
+                />
+                <label htmlFor="consent-checkbox" style={{ fontSize: '13px', lineHeight: '18px', color: '#666666', cursor: 'pointer', fontWeight: 500 }}>
+                  Your personal data you have provided will be processed by The Online Speechie for the purpose of providing you results and educational information and to support your experience throughout the Online Speechie website, and for other purposes described in our privacy policy. By proceeding with your submission, you agree to our <a href="https://onlinespeechie.com/terms-conditons-policies/" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary)', textDecoration: 'underline', fontWeight: 'bold' }}>Terms and Conditions</a>.
+                </label>
+              </div>
+
+              <button 
+                type="submit" 
+                className="btn btn-start" 
+                style={{ width: '100%', marginTop: '16px' }} 
+                disabled={loading || !agreeConsent}
+              >
                 {loading ? 'Submitting...' : 'Receive Results'}
               </button>
             </form>
