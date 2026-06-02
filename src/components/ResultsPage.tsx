@@ -273,7 +273,7 @@ export default function ResultsPage({ submissionResult, onRestart }: ResultsPage
             {currentContent.textBox}
           </p>
           <p style={{ fontSize: '16px', lineHeight: '22px', textAlign: 'center', color: '#ffffff', margin: '8px 0 0 0', fontWeight: 'bold' }}>
-            Head to your inbox - your full results and a personalised action plan are waiting for you.
+            Watch the video below to understand what your results mean and your next steps.
           </p>
         </div>
 
@@ -297,12 +297,10 @@ export default function ResultsPage({ submissionResult, onRestart }: ResultsPage
           </div>
           <div className="video-text">
             <h2 style={{ fontSize: '24px', lineHeight: '32px', color: '#383838', margin: 0 }}>
-              What your results mean, and what to focus on next
+              In this video: What your results mean & what to focus on next
             </h2>
             <p style={{ fontSize: '16px', lineHeight: '26px', color: '#383838', margin: 0 }}>
-              In this short video, I’ll walk you through:<br/>
-              - what your result means<br/>
-              - and the next steps I’d recommend from here
+              Your full results and personalised action plan will be emailed to you shortly.
             </p>
           </div>
         </div>

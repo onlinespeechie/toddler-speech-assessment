@@ -104,6 +104,7 @@ export default function AssessmentApp() {
   const [childDoB, setChildDoB] = useState('');
   const [parentName, setParentName] = useState('');
   const [parentEmail, setParentEmail] = useState('');
+  const [childFirstName, setChildFirstName] = useState('');
   const [agreeConsent, setAgreeConsent] = useState(false);
   
   const [loading, setLoading] = useState(false);
@@ -237,6 +238,7 @@ export default function AssessmentApp() {
         body: JSON.stringify({ 
           parentName, 
           parentEmail, 
+          childFirstName,
           childDoB,
           totalScore: score,
           answers: pastAnswers
@@ -471,6 +473,18 @@ export default function AssessmentApp() {
                   placeholder="hello@example.com" 
                   value={parentEmail}
                   onChange={e => setParentEmail(e.target.value)}
+                  disabled={loading}
+                />
+              </div>
+
+              <div className="input-group">
+                <label className="input-label">Child's First Name</label>
+                <input 
+                  type="text" 
+                  className="input-field" 
+                  placeholder="optional" 
+                  value={childFirstName}
+                  onChange={e => setChildFirstName(e.target.value)}
                   disabled={loading}
                 />
               </div>

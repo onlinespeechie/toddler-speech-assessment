@@ -57,6 +57,7 @@ model Submission {
   createdAt          DateTime @default(now())
   parentName         String   @default("Unknown")
   parentEmail        String   @default("Unknown")
+  childFirstName     String?
   childDob           DateTime @default(now())
   totalScore         Int      @default(0)
   scoreStatus        String   @default("Unknown")

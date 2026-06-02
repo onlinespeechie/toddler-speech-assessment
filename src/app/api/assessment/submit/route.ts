@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma';
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { parentName, parentEmail, childDoB, totalScore, finalTag, answers } = body;
+    const { parentName, parentEmail, childFirstName, childDoB, totalScore, finalTag, answers } = body;
 
     if (!parentName || !parentEmail || !childDoB) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -214,6 +214,7 @@ export async function POST(req: Request) {
       data: {
         parentName,
         parentEmail,
+        childFirstName: childFirstName || null,
         childDob: new Date(childDoB),
         totalScore: score,
         scoreStatus: output1,
@@ -239,6 +240,8 @@ export async function POST(req: Request) {
           first_name: parentName,
           fields: {
             childs_date_of_birth: childDoB,
+            child_first_name: childFirstName || '',
+            childs_first_name: childFirstName || '',
             overall_score: output1,
             speech_clarity: speechClarityConcern ? "SPEECH CLARITY CONCERN" : "NO CONCERN",
             comm_stage: commStage
