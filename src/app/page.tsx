@@ -61,7 +61,13 @@ export default function AssessmentApp() {
       // Add Autoplay params (Warning: browsers may block autoplay if not muted)
       if (finalUrl.includes('youtube.com/embed/') || finalUrl.includes('player.vimeo.com/video/')) {
         const char = finalUrl.includes('?') ? '&' : '?';
-        return `${finalUrl}${char}autoplay=1`;
+        let autoplayParams = 'autoplay=1';
+        if (finalUrl.includes('youtube.com/embed/')) {
+          autoplayParams += '&mute=1';
+        } else if (finalUrl.includes('player.vimeo.com/video/')) {
+          autoplayParams += '&muted=1';
+        }
+        return `${finalUrl}${char}${autoplayParams}`;
       }
       return finalUrl;
     } catch(e) { return url; }
@@ -430,6 +436,7 @@ export default function AssessmentApp() {
                         src={allPlacements[currentQuestionIndex].question.videoUrl!} 
                         controls 
                         autoPlay
+                        muted
                         width="100%" 
                         height="100%"
                         style={{ objectFit: 'cover' }}
