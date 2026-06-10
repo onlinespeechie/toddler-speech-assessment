@@ -87,7 +87,10 @@ h1, h2, h3 {
 }
 
 .input-field {
+  display: block;
   width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   padding: 14px 16px;
   border-radius: 12px;
   border: 2px solid var(--border-color);
@@ -97,6 +100,21 @@ h1, h2, h3 {
   font-size: 1.1rem;
   outline: none;
   font-weight: 500;
+}
+
+/* Fix Safari/iOS date input width and overflow */
+input[type="date"].input-field {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+@supports (-webkit-touch-callout: none) {
+  input[type="date"].input-field {
+    -webkit-appearance: none;
+    appearance: none;
+  }
 }
 
 .input-field:focus {
