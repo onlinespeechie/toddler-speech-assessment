@@ -46,10 +46,10 @@ export default function ResultsPage({ submissionResult, onRestart }: ResultsPage
   const currentContent = contentMap[status as keyof typeof contentMap] || contentMap['Delayed'];
 
   const testimonials = [
-    { id: 1, text: "It's definitely made me a more confident mum now.", author: "Claudia A.", img: "/claudia.jpg" },
-    { id: 2, text: "He's now saying his first words and even linking them together - it's incredible to see his progress!", author: "Rebekah H.", img: "/rebekah.jpg" },
-    { id: 3, text: "Ready Set Talk gave me the confidence and the hope that I can do this, it's been really life-changing for both me and Roper.", author: "Melissa M.", img: "/melissa.jpg" },
-    { id: 4, text: "He went from not making eye contact or speaking at all to being described as very chatty by his teacher.", author: "Jessica V.", img: "/jessica.jpg" }
+    { id: 1, text: "It's definitely made me a more confident mum now.", author: "Claudia A.", img: "/Claudia A.jpg" },
+    { id: 2, text: "He went from not making eye contact or speaking at all to being described as very chatty by his teacher.", author: "Jessica V.", img: "/Jessica V.jpg" },
+    { id: 3, text: "Ready Set Talk gave me the confidence and the hope that I can do this, it's been really life-changing for both me and Roper.", author: "Melissa M.", img: "/Melissa M.jpg" },
+    { id: 4, text: "He's now saying his first words and even linking them together - it's incredible to see his progress!", author: "Rebekah H.", img: "/Rebekah H.jpg" }
   ];
 
   const ctaLink = "https://onlinespeechie.com/checkout/?add-to-cart=9249";
@@ -396,8 +396,12 @@ export default function ResultsPage({ submissionResult, onRestart }: ResultsPage
             <div className="testimonials-container">
               {testimonials.map((t) => (
                 <div key={t.id} className="testimonial-item">
-                  <div style={{ width: '60px', height: '60px', borderRadius: '50%', overflow: 'hidden', flexShrink: 0, border: '3px solid #D387FF', boxSizing: 'border-box' }}>
-                    <img src={t.img} alt={t.author} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <div style={{ width: '60px', height: '60px', borderRadius: '50%', overflow: 'hidden', flexShrink: 0, border: '3px solid #D387FF', boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#E8E8E8' }}>
+                    {t.img ? (
+                      <img src={t.img} alt={t.author} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <User size={30} color="#9ca3af" />
+                    )}
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <p style={{ fontSize: '15px', lineHeight: '22px', color: '#383838', margin: 0, fontStyle: 'italic' }}>
