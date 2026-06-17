@@ -4,6 +4,30 @@ import { notFound } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';
 
+function calculateAgeAtSubmission(dob: Date, createdAt: Date) {
+  let years = createdAt.getFullYear() - dob.getFullYear();
+  let months = createdAt.getMonth() - dob.getMonth();
+  let days = createdAt.getDate() - dob.getDate();
+
+  if (days < 0) {
+    const prevMonth = new Date(createdAt.getFullYear(), createdAt.getMonth(), 0);
+    days += prevMonth.getDate();
+    months--;
+  }
+
+  if (months < 0) {
+    months += 12;
+    years--;
+  }
+
+  const parts = [];
+  if (years > 0) parts.push(`${years} ${years === 1 ? 'yr' : 'yrs'}`);
+  if (months > 0) parts.push(`${months} ${months === 1 ? 'mo' : 'mos'}`);
+  if (days > 0 || parts.length === 0) parts.push(`${days} ${days === 1 ? 'd' : 'd'}`);
+
+  return parts.join(', ');
+}
+
 export default async function SubmissionDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const submission = await prisma.submission.findUnique({
@@ -16,7 +40,7 @@ export default async function SubmissionDetailPage({ params }: { params: Promise
   }
 
   return (
-    <div style={{ padding: '40px', maxWidth: '1000px', margin: '0 auto', fontFamily: "'Quicksand', sans-serif" }}>
+    <div style={{ padding: '40px', maxWidth: '1100px', margin: '0 auto', fontFamily: "'Quicksand', sans-serif" }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
         <h1 style={{ fontSize: '2.5rem' }}>Submission Details</h1>
         <Link href="/admin/submissions" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>
@@ -24,6 +48,37 @@ export default async function SubmissionDetailPage({ params }: { params: Promise
         </Link>
       </div>
 
+      {/* Metadata Boxes */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '24px', marginBottom: '24px' }}>
+        <div className="card-panel" style={{ padding: '24px', textAlign: 'center' }}>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontWeight: 600, textTransform: 'uppercase', margin: 0 }}>Submission Date</p>
+          <h2 style={{ fontSize: '1.4rem', marginTop: '12px', marginBottom: 0 }}>
+            {submission.createdAt.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+          </h2>
+        </div>
+        <div className="card-panel" style={{ padding: '24px', textAlign: 'center' }}>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontWeight: 600, textTransform: 'uppercase', margin: 0 }}>Parent Name</p>
+          <h2 style={{ fontSize: '1.4rem', marginTop: '12px', marginBottom: 0 }}>{submission.parentName}</h2>
+        </div>
+        <div className="card-panel" style={{ padding: '24px', textAlign: 'center' }}>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontWeight: 600, textTransform: 'uppercase', margin: 0 }}>Email</p>
+          <h2 style={{ fontSize: '1.2rem', marginTop: '12px', marginBottom: 0, wordBreak: 'break-all' }}>{submission.parentEmail}</h2>
+        </div>
+        <div className="card-panel" style={{ padding: '24px', textAlign: 'center' }}>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontWeight: 600, textTransform: 'uppercase', margin: 0 }}>Age at Submission</p>
+          <h2 style={{ fontSize: '1.4rem', marginTop: '12px', marginBottom: 0 }}>
+            {calculateAgeAtSubmission(submission.childDob, submission.createdAt)}
+          </h2>
+        </div>
+        <div className="card-panel" style={{ padding: '24px', textAlign: 'center' }}>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontWeight: 600, textTransform: 'uppercase', margin: 0 }}>Child's DOB</p>
+          <h2 style={{ fontSize: '1.4rem', marginTop: '12px', marginBottom: 0 }}>
+            {submission.childDob.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+          </h2>
+        </div>
+      </div>
+
+      {/* Results Boxes */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '24px', marginBottom: '32px' }}>
         <div className="card-panel" style={{ padding: '24px', textAlign: 'center' }}>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontWeight: 600, textTransform: 'uppercase' }}>Total Score</p>

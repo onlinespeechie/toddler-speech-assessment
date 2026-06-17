@@ -42,23 +42,18 @@ export default async function SubmissionsPage() {
       </div>
 
       <div className="card-panel" style={{ overflowX: 'auto', padding: '24px' }}>
-        <table style={{ width: '100%', minWidth: '1100px', borderCollapse: 'collapse', textAlign: 'left' }}>
+        <table style={{ width: '100%', minWidth: '850px', borderCollapse: 'collapse', textAlign: 'left' }}>
           <thead>
             <tr style={{ borderBottom: '2px solid var(--border-color)' }}>
               <th style={{ padding: '12px 8px' }}>Submission Date</th>
               <th style={{ padding: '12px 8px' }}>Parent Name</th>
               <th style={{ padding: '12px 8px' }}>Parent Email</th>
-              <th style={{ padding: '12px 8px' }}>Child DOB</th>
               <th style={{ padding: '12px 8px' }}>Age at Submission</th>
-              <th style={{ padding: '12px 8px' }}>Speech Clarity Concern</th>
-              <th style={{ padding: '12px 8px' }}>Total Score</th>
-              <th style={{ padding: '12px 8px' }}>Communication Stage</th>
               <th style={{ padding: '12px 8px' }}>Action</th>
             </tr>
           </thead>
           <tbody>
             {submissions.map((sub) => {
-              const isClarityConcern = sub.speechClarity?.includes('CONCERN');
               return (
                 <tr key={sub.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
                   <td style={{ padding: '12px 8px' }}>
@@ -66,31 +61,7 @@ export default async function SubmissionsPage() {
                   </td>
                   <td style={{ padding: '12px 8px' }}>{sub.parentName}</td>
                   <td style={{ padding: '12px 8px', color: 'var(--text-muted)' }}>{sub.parentEmail}</td>
-                  <td style={{ padding: '12px 8px' }}>
-                    {sub.childDob.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
-                  </td>
                   <td style={{ padding: '12px 8px' }}>{calculateAgeAtSubmission(sub.childDob, sub.createdAt)}</td>
-                  <td style={{ padding: '12px 8px' }}>
-                    <span style={{ 
-                      color: isClarityConcern ? '#ef4444' : '#10b981',
-                      fontWeight: 600,
-                      fontSize: '0.9rem'
-                    }}>
-                      {sub.speechClarity ? (isClarityConcern ? 'Concern' : 'No Concern') : 'N/A'}
-                    </span>
-                  </td>
-                  <td style={{ padding: '12px 8px', fontWeight: 'bold' }}>{sub.totalScore}</td>
-                  <td style={{ padding: '12px 8px' }}>
-                    <span style={{ 
-                      background: '#E2E2D1', 
-                      padding: '4px 8px', 
-                      borderRadius: '4px', 
-                      fontSize: '0.85rem', 
-                      fontWeight: 600 
-                    }}>
-                      {sub.communicationStage}
-                    </span>
-                  </td>
                   <td style={{ padding: '12px 8px' }}>
                     <Link href={`/admin/submissions/${sub.id}`}>
                       <button className="btn btn-primary" style={{ padding: '6px 12px', fontSize: '0.85rem' }}>
@@ -103,7 +74,7 @@ export default async function SubmissionsPage() {
             })}
             {submissions.length === 0 && (
               <tr>
-                <td colSpan={9} style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                <td colSpan={5} style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>
                   No submissions found.
                 </td>
               </tr>
