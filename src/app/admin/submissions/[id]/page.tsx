@@ -48,53 +48,57 @@ export default async function SubmissionDetailPage({ params }: { params: Promise
         </Link>
       </div>
 
-      {/* Metadata Boxes */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '24px', marginBottom: '24px' }}>
-        <div className="card-panel" style={{ padding: '24px', textAlign: 'center' }}>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontWeight: 600, textTransform: 'uppercase', margin: 0 }}>Submission Date</p>
-          <h2 style={{ fontSize: '1.4rem', marginTop: '12px', marginBottom: 0 }}>
-            {submission.createdAt.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
-          </h2>
-        </div>
-        <div className="card-panel" style={{ padding: '24px', textAlign: 'center' }}>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontWeight: 600, textTransform: 'uppercase', margin: 0 }}>Parent Name</p>
-          <h2 style={{ fontSize: '1.4rem', marginTop: '12px', marginBottom: 0 }}>{submission.parentName}</h2>
-        </div>
-        <div className="card-panel" style={{ padding: '24px', textAlign: 'center' }}>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontWeight: 600, textTransform: 'uppercase', margin: 0 }}>Email</p>
-          <h2 style={{ fontSize: '1.2rem', marginTop: '12px', marginBottom: 0, wordBreak: 'break-all' }}>{submission.parentEmail}</h2>
-        </div>
-        <div className="card-panel" style={{ padding: '24px', textAlign: 'center' }}>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontWeight: 600, textTransform: 'uppercase', margin: 0 }}>Age at Submission</p>
-          <h2 style={{ fontSize: '1.4rem', marginTop: '12px', marginBottom: 0 }}>
-            {calculateAgeAtSubmission(submission.childDob, submission.createdAt)}
-          </h2>
-        </div>
-        <div className="card-panel" style={{ padding: '24px', textAlign: 'center' }}>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontWeight: 600, textTransform: 'uppercase', margin: 0 }}>Child's DOB</p>
-          <h2 style={{ fontSize: '1.4rem', marginTop: '12px', marginBottom: 0 }}>
-            {submission.childDob.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
-          </h2>
-        </div>
+      {/* Metadata Table in a Single Card */}
+      <div className="card-panel" style={{ padding: '24px', marginBottom: '32px', width: '100%', margin: '0 0 32px 0' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+          <tbody>
+            <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
+              <td style={{ padding: '14px 8px', fontWeight: 600, color: 'var(--text-muted)', width: '280px' }}>Submission Date</td>
+              <td style={{ padding: '14px 8px', fontSize: '1.05rem', fontWeight: 500 }}>
+                {submission.createdAt.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+              </td>
+            </tr>
+            <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
+              <td style={{ padding: '14px 8px', fontWeight: 600, color: 'var(--text-muted)' }}>Parent Name</td>
+              <td style={{ padding: '14px 8px', fontSize: '1.05rem', fontWeight: 500 }}>{submission.parentName}</td>
+            </tr>
+            <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
+              <td style={{ padding: '14px 8px', fontWeight: 600, color: 'var(--text-muted)' }}>Email</td>
+              <td style={{ padding: '14px 8px', fontSize: '1.05rem', fontWeight: 500, wordBreak: 'break-all' }}>{submission.parentEmail}</td>
+            </tr>
+            <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
+              <td style={{ padding: '14px 8px', fontWeight: 600, color: 'var(--text-muted)' }}>Age at Submission</td>
+              <td style={{ padding: '14px 8px', fontSize: '1.05rem', fontWeight: 500 }}>
+                {calculateAgeAtSubmission(submission.childDob, submission.createdAt)}
+              </td>
+            </tr>
+            <tr>
+              <td style={{ padding: '14px 8px', fontWeight: 600, color: 'var(--text-muted)' }}>Child's DOB</td>
+              <td style={{ padding: '14px 8px', fontSize: '1.05rem', fontWeight: 500 }}>
+                {submission.childDob.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
 
       {/* Results Boxes */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '24px', marginBottom: '32px' }}>
-        <div className="card-panel" style={{ padding: '24px', textAlign: 'center' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px', marginBottom: '32px', width: '100%' }}>
+        <div className="card-panel" style={{ padding: '24px', textAlign: 'center', width: '100%', margin: 0 }}>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontWeight: 600, textTransform: 'uppercase' }}>Total Score</p>
           <h2 style={{ fontSize: '2rem', marginTop: '8px' }}>{submission.totalScore}</h2>
         </div>
-        <div className="card-panel" style={{ padding: '24px', textAlign: 'center' }}>
+        <div className="card-panel" style={{ padding: '24px', textAlign: 'center', width: '100%', margin: 0 }}>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontWeight: 600, textTransform: 'uppercase' }}>Score Status</p>
           <h2 style={{ fontSize: '1.5rem', marginTop: '8px', color: submission.scoreStatus === 'On Track' ? '#10b981' : '#f59e0b' }}>
             {submission.scoreStatus}
           </h2>
         </div>
-        <div className="card-panel" style={{ padding: '24px', textAlign: 'center' }}>
+        <div className="card-panel" style={{ padding: '24px', textAlign: 'center', width: '100%', margin: 0 }}>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontWeight: 600, textTransform: 'uppercase' }}>Comm Stage</p>
           <h2 style={{ fontSize: '1.2rem', marginTop: '8px' }}>{submission.communicationStage}</h2>
         </div>
-        <div className="card-panel" style={{ padding: '24px', textAlign: 'center' }}>
+        <div className="card-panel" style={{ padding: '24px', textAlign: 'center', width: '100%', margin: 0 }}>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontWeight: 600, textTransform: 'uppercase' }}>Speech Clarity</p>
           <h2 style={{ fontSize: '1.2rem', marginTop: '8px', color: submission.speechClarity?.includes('CONCERN') ? '#ef4444' : '#10b981' }}>
             {submission.speechClarity || 'N/A'}
