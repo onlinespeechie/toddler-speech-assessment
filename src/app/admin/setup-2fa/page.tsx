@@ -143,13 +143,8 @@ export default function Setup2FAPage() {
                   width: '220px',
                   height: '220px'
                 }}
-              >
-                <img 
-                  src={`data:image/svg+xml;utf8,${encodeURIComponent(qrCodeSvg)}`} 
-                  alt="MFA Setup QR Code" 
-                  style={{ width: '100%', height: '100%', display: 'block' }} 
-                />
-              </div>
+                dangerouslySetInnerHTML={{ __html: qrCodeSvg.replace('<svg', '<svg style="width: 100%; height: 100%; display: block;"') }}
+              />
               
               {secret && (
                 <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
