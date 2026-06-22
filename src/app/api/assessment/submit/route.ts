@@ -298,6 +298,26 @@ export async function POST(req: Request) {
             console.error('ConvertKit Stage Tagging API error:', stageTagErrorData);
           }
         }
+
+        // --- Speech Clarity Concern Tagging Logic ---
+        if (speechClarityConcern) {
+          const clarityTagEndpoint = `https://api.convertkit.com/v3/tags/20536350/subscribe`;
+          const tagPayload = {
+            api_key: CONVERTKIT_API_KEY,
+            email: parentEmail
+          };
+
+          const clarityTagResponse = await fetch(clarityTagEndpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json; charset=utf-8' },
+            body: JSON.stringify(tagPayload)
+          });
+
+          if (!clarityTagResponse.ok) {
+            const clarityTagErrorData = await clarityTagResponse.text();
+            console.error('ConvertKit Speech Clarity Tagging API error:', clarityTagErrorData);
+          }
+        }
       } else {
         console.warn('ConvertKit API Key or Form ID is missing. Please add CONVERTKIT_FORM_ID to .env. Skipping ConvertKit sync.');
       }
