@@ -220,7 +220,12 @@ export default function Setup2FAPage() {
                   width: '220px',
                   height: '220px'
                 }}
-                dangerouslySetInnerHTML={{ __html: qrCodeSvg.replace('<svg', '<svg style="width: 100%; height: 100%; display: block;"') }}
+                dangerouslySetInnerHTML={{ 
+                  __html: (() => {
+                    const cleanSvg = qrCodeSvg.replace(/^data:image\/svg\+xml;utf-?8,/, '');
+                    return cleanSvg.replace('<svg', '<svg style="width: 100%; height: 100%; display: block;"');
+                  })()
+                }}
               />
               
               {secret && (
