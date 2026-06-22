@@ -21,9 +21,42 @@ export async function proxy(request: NextRequest) {
   const isUrlValid = supabaseUrl && (supabaseUrl.startsWith('http://') || supabaseUrl.startsWith('https://'));
 
   if (!isUrlValid || !supabaseAnonKey || supabaseAnonKey === 'undefined' || supabaseAnonKey === 'your_anon_key_here') {
-    // If not configured yet, skip proxy to avoid breaking other parts of the app during setup
-    return supabaseResponse;
+    if (isApiRoute) {
+      return NextResponse.json({ error: 'Supabase configuration is missing' }, { status: 500 });
+    }
+    return new NextResponse(
+      `<html>
+        <head>
+          <title>Admin Panel Locked</title>
+          <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600;700&display=swap" rel="stylesheet">
+        </head>
+        <body style="font-family: 'Quicksand', sans-serif; background-color: #F1F1E6; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; padding: 20px; box-sizing: border-box;">
+          <div style="background: #ffffff; border: 2px solid #BCBCA7; padding: 40px; border-radius: 20px; box-shadow: -8px 8px 0px #BCBCA7; max-width: 480px; width: 100%; text-align: center; box-sizing: border-box;">
+            <img src="https://onlinespeechie.com/wp-content/uploads/2024/03/os-logo-new.png" alt="Logo" style="height: 40px; margin-bottom: 24px;">
+            <h2 style="margin: 0 0 16px 0; font-size: 1.8rem; font-weight: 700; color: #333333;">Admin Panel Locked</h2>
+            <p style="color: #666666; margin: 0 0 24px 0; line-height: 1.6; font-size: 1rem; font-weight: 500;">
+              This administrative panel is locked because the required Supabase environment variables (<code>NEXT_PUBLIC_SUPABASE_URL</code> and <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code>) are not configured on the live server.
+            </p>
+            <div style="background: #fafaf5; border: 2px solid #BCBCA7; border-radius: 12px; padding: 16px; margin-bottom: 24px; text-align: left; font-size: 0.9rem; line-height: 1.5; color: #333333;">
+              <strong>Required Steps:</strong>
+              <ol style="margin: 8px 0 0 20px; padding: 0;">
+                <li>Open your hosting provider's dashboard (e.g., Vercel).</li>
+                <li>Go to your project's Environment Variables settings.</li>
+                <li>Add the variables with their correct values from the Supabase settings.</li>
+                <li>Redeploy or restart the server.</li>
+              </ol>
+            </div>
+            <p style="font-size: 0.85rem; color: #888888; margin: 0; font-weight: 500;">Please configure these variables to unlock this page.</p>
+          </div>
+        </body>
+      </html>`,
+      {
+        status: 500,
+        headers: { 'Content-Type': 'text/html' },
+      }
+    );
   }
+
 
 
   const supabase = createServerClient(
