@@ -24,12 +24,17 @@ export async function POST(req: Request) {
       ageDays += daysInPrevMonth;
     }
     
-    // For ConvertKit, we can still send the integer ageMonths
-    let calculatedAge = ageMonths;
-
-    let recommendations: string[] = [];
+    const recommendations: string[] = [];
     const expressiveCodes = ['Q37', 'Q40', 'Q41', 'Q42', 'Q44', 'Q45', 'Q46', 'Q47', 'Q48', 'Q49', 'Q50', 'Q51', 'Q52', 'Q53', 'Q55', 'Q56', 'Q58', 'Q60', 'Q62', 'Q64'];
     const comprehensionCodes = ['Q38', 'Q39', 'Q43', 'Q54', 'Q57', 'Q59', 'Q61', 'Q63'];
+
+    interface QuizAnswer {
+      questionId: string;
+      questionText: string;
+      questionCode: string | null;
+      weight: number;
+      text: string;
+    }
 
     function getCategory(code: string | null) {
       if (!code) return null;
@@ -71,15 +76,17 @@ export async function POST(req: Request) {
       if (score <= 25) output1 = 'Delayed'; else if (score <= 35) output1 = 'At Risk';
     }
 
-    let answersToSave: any[] = [];
+    let answersToSave: { questionId: string; questionText: string; value: string }[] = [];
     let commStage = "ENGAGER";
     let speechClarityConcern = false;
+
+    const userAnswers = (answers || []) as QuizAnswer[];
 
     if (answers && Array.isArray(answers)) {
       let expressiveTotal = 0;
       let comprehensionTotal = 0;
 
-      answersToSave = answers.map((a: any) => {
+      answersToSave = userAnswers.map((a: QuizAnswer) => {
         const cat = getCategory(a.questionCode);
         if (cat === 'Expressive') expressiveTotal += (a.weight || 0);
         if (cat === 'Comprehension') comprehensionTotal += (a.weight || 0);
@@ -95,12 +102,12 @@ export async function POST(req: Request) {
       }
 
       // 2. Speech Clarity (Output 2)
-      const icsAnswers = answers.filter((a: any) => a.questionCode?.startsWith('ICS'));
+      const icsAnswers = userAnswers.filter((a: QuizAnswer) => a.questionCode?.startsWith('ICS'));
       if (icsAnswers.length > 0) {
-        const icsSum = icsAnswers.reduce((sum: number, a: any) => sum + (a.weight || 0), 0);
+        const icsSum = icsAnswers.reduce((sum: number, a: QuizAnswer) => sum + (a.weight || 0), 0);
         const icsAvg = icsSum / icsAnswers.length; // Use actual length instead of hardcoded 7
         
-        const ics3 = icsAnswers.find((a: any) => a.questionCode === 'ICS-3');
+        const ics3 = icsAnswers.find((a: QuizAnswer) => a.questionCode === 'ICS-3');
         const ics3Score = ics3 ? (ics3.weight || 0) : 5; // Default to 'Always' if missing
 
         if (icsAvg <= 4.0 || ics3Score <= 3) {
@@ -110,98 +117,80 @@ export async function POST(req: Request) {
       }
 
       // 3. Early Concern Flag (Q38, Q39, Q40)
-      const q38 = answers.find((a: any) => a.questionCode === 'Q38');
-      const q39 = answers.find((a: any) => a.questionCode === 'Q39');
-      const q40 = answers.find((a: any) => a.questionCode === 'Q40');
+      const q38 = userAnswers.find((a: QuizAnswer) => a.questionCode === 'Q38');
+      const q39 = userAnswers.find((a: QuizAnswer) => a.questionCode === 'Q39');
+      const q40 = userAnswers.find((a: QuizAnswer) => a.questionCode === 'Q40');
 
-      const isRarely = (ans: any) => ans && (ans.text?.includes('Rarely') || ans.text?.includes('Not Yet') || ans.weight === 0);
+      const isRarelyAnswer = (ans: QuizAnswer | undefined) => ans && (ans.text?.includes('Rarely') || ans.text?.includes('Not Yet') || ans.weight === 0);
 
-      if (isRarely(q38) && isRarely(q39) && isRarely(q40)) {
+      if (isRarelyAnswer(q38) && isRarelyAnswer(q39) && isRarelyAnswer(q40)) {
         recommendations.push("EARLY COMMUNICATION CONCERN");
       }
 
       // 4. Comm Stage Waterfall (Output 3)
       commStage = "ENGAGER"; // Default fallback
       const hasVal = (code: string, values: string[]) => {
-        const found = answers.find((a: any) => a.questionCode && a.questionCode.split('_')[0] === code);
+        const found = userAnswers.find((a: QuizAnswer) => a.questionCode && a.questionCode.split('_')[0] === code);
         if (!found) return false;
-        return values.some(v => found.text && found.text.includes(v));
+        return values.some(v => found.text && found.text.toLowerCase().replace(/\s+/g, '') === v.toLowerCase().replace(/\s+/g, ''));
       };
 
-      // Step 1: Conversationalist
-      const q56_present = answers.some((a: any) => a.questionCode?.split('_')[0] === 'Q56');
-      if (q56_present) {
-        const q56_AM = hasVal('Q56', ['Always/Mostly', 'Always / Mostly']);
-        const q44_AM = hasVal('Q44', ['Always/Mostly', 'Always / Mostly']);
-        const q44_Some = hasVal('Q44', ['Sometimes']);
-        
-        let supp1 = 0;
-        if (hasVal('Q64', ['Always/Mostly', 'Always / Mostly', 'Sometimes'])) supp1++;
-        if (hasVal('Q58', ['Always/Mostly', 'Always / Mostly'])) supp1++;
-        if (hasVal('Q48', ['Yes']) || hasVal('Q53', ['Yes'])) supp1++;
-        if (hasVal('Q60', ['Yes']) || hasVal('Q62', ['Yes'])) supp1++;
-        if (hasVal('Q67', ['Always/Mostly', 'Always / Mostly'])) supp1++;
+      const isAlwaysMostly = (code: string) => hasVal(code, ['Always/Mostly', 'Always / Mostly', 'Always', 'Mostly']);
+      const isSometimes = (code: string) => hasVal(code, ['Sometimes', 'sometimes']);
+      const isAlwaysMostlyOrNormally = (code: string) => isAlwaysMostly(code) || isSometimes(code);
+      const isYes = (code: string) => hasVal(code, ['Yes', 'yes']);
 
-        if (q56_AM && q44_AM) {
-          commStage = "CONVERSATIONALIST"; // High confidence
-        } else if (q56_AM && q44_Some && supp1 >= 2) {
-          commStage = "CONVERSATIONALIST"; // Borderline saved by supporting
-        }
+      // 1. CONVERSATIONALIST
+      if (
+        isAlwaysMostly('Q56') || // 3-4 word sentences
+        isAlwaysMostly('Q64') || // grammatically correct sentences
+        isAlwaysMostly('Q67')    // asks what/where/why questions
+      ) {
+        commStage = "CONVERSATIONALIST";
+      }
+      // 2. PHRASE USER
+      else if (
+        isSometimes('Q56') || // 3-4 word sentences (sometimes)
+        isAlwaysMostlyOrNormally('Q44') || // short phrases, different ideas
+        isAlwaysMostlyOrNormally('Q42') || // copies 2-word phrases
+        isAlwaysMostlyOrNormally('Q52') || // copies 2-word phrases
+        isAlwaysMostlyOrNormally('Q66') || // puts 2+ words together
+        isAlwaysMostlyOrNormally('Q58')    // labels actions in pictures
+      ) {
+        commStage = "PHRASE USER";
+      }
+      // 3. SINGLE WORD USER
+      else if (
+        isYes('Q41') || // 8+ words
+        isYes('Q49') || // 15+ words
+        isYes('Q37') || // 4+ words
+        isYes('Q46') || // names at least 1 picture
+        isYes('Q50') || // names at least 1 picture
+        isYes('Q54') || // names at least 1 picture
+        isYes('Q60') || // tells own name
+        isYes('Q62')    // tells own name
+      ) {
+        commStage = "SINGLE WORD USER";
+      }
+      // 4. ENGAGER
+      else {
+        commStage = "ENGAGER";
       }
 
-      // Step 2: Phrase User
-      if (commStage === "ENGAGER") {
-        let prim2 = 0;
-        if (hasVal('Q42', ['Always/Mostly', 'Always / Mostly']) || hasVal('Q52', ['Always/Mostly', 'Always / Mostly'])) prim2++;
-        if (hasVal('Q44', ['Always/Mostly', 'Always / Mostly', 'Sometimes'])) prim2++;
-        if (hasVal('Q66', ['Always/Mostly', 'Always / Mostly'])) prim2++;
-
-        let supp2 = 0;
-        if (hasVal('Q48', ['Yes']) || hasVal('Q53', ['Yes'])) supp2++;
-        if (hasVal('Q49', ['Yes'])) supp2++;
-        if (hasVal('Q45', ['Always/Mostly', 'Always / Mostly', 'Sometimes']) || hasVal('Q55', ['Always/Mostly', 'Always / Mostly', 'Sometimes'])) supp2++;
-
-        if (prim2 >= 2) {
-          commStage = "PHRASE USER";
-        } else if (prim2 === 1 && supp2 >= 2) {
-          commStage = "PHRASE USER";
-        }
-      }
-
-      // Step 3: Single Word User
-      if (commStage === "ENGAGER") {
-        let prim3 = 0;
-        if (hasVal('Q41', ['Yes'])) prim3++;
-        if (hasVal('Q49', ['Yes'])) prim3++;
-
-        let supp3 = 0;
-        if (hasVal('Q46', ['Yes']) || hasVal('Q50', ['Yes']) || hasVal('Q54', ['Yes'])) supp3++;
-        if (hasVal('Q43', ['Always/Mostly', 'Always / Mostly', 'Sometimes'])) supp3++;
-        if (hasVal('Q47', ['Yes']) || hasVal('Q57', ['Yes'])) supp3++;
-        if (hasVal('Q40', ['Always/Mostly', 'Always / Mostly'])) supp3++;
-
-        const q37_Yes = hasVal('Q37', ['Yes']);
-
-        if (prim3 >= 1) {
-          commStage = "SINGLE WORD USER";
-        } else if (q37_Yes && supp3 >= 2) {
-          commStage = "SINGLE WORD USER";
-        }
-      }
-
-      // Step 4: Engager Sub-Flag
+      // 4. Engager Sub-Flag (Early Communication Concern)
       if (commStage === "ENGAGER") {
         const isRarely = (code: string) => {
-          const found = answers.find((a: any) => a.questionCode && a.questionCode.split('_')[0] === code);
+          const found = userAnswers.find((a: QuizAnswer) => a.questionCode && a.questionCode.split('_')[0] === code);
           if (!found) return null;
-          return found.text?.includes('Rarely') || found.text?.includes('Not Yet') || found.text?.includes('Not yet');
+          const text = (found.text || '').toLowerCase();
+          return text.includes('rarely') || text.includes('not yet');
         };
 
-        const r40 = isRarely('Q40');
         const r38 = isRarely('Q38');
         const r39 = isRarely('Q39');
-        
-        const engagerChecks = [r40, r38, r39].filter(v => v !== null);
+        const r40 = isRarely('Q40');
+
+        const engagerChecks = [r38, r39, r40].filter(v => v !== null);
         if (engagerChecks.length > 0 && engagerChecks.every(v => v === true)) {
           commStage = "ENGAGER (EARLY COMMUNICATION CONCERN)";
         }
