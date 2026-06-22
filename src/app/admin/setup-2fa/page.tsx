@@ -57,7 +57,7 @@ export default function Setup2FAPage() {
         // Unenroll any dangling unverified factors from previous setup attempts
         const unverifiedFactors = allFactors.filter(f => f.status === 'unverified');
         for (const f of unverifiedFactors) {
-          const { error: unenrollError } = await supabase.auth.mfa.unenroll({ id: f.id });
+          const { error: unenrollError } = await supabase.auth.mfa.unenroll({ factorId: f.id });
           if (unenrollError) {
             console.error("Failed to unenroll:", unenrollError);
             setErrorMsg(`Failed to clean up unverified factor (${f.id}): ${unenrollError.message}`);
