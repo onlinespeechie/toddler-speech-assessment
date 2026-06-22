@@ -6,25 +6,35 @@ import { createClient } from '@/utils/supabase/client';
 
 export const dynamic = 'force-dynamic';
 
+interface MFAFactor {
+  id: string;
+  factor_type: string;
+  status: string;
+}
+
 export default function Setup2FAPage() {
   const [factorId, setFactorId] = useState('');
-  const [qrCodeSvg, setQrCodeSvg] = useState('');
+  const [qrCodeDataUrl, setQrCodeDataUrl] = useState('');
   const [secret, setSecret] = useState('');
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [enrollLoading, setEnrollLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
-  const [debugFactors, setDebugFactors] = useState<any[]>([]);
+  const [debugFactors, setDebugFactors] = useState<MFAFactor[]>([]);
 
   const router = useRouter();
   const supabase = createClient();
 
   useEffect(() => {
+    let active = true;
+
     async function startEnrollment() {
       if (!supabase || !supabase.auth) {
-        setErrorMsg('Supabase is not configured. Please define NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in your deployment settings.');
-        setEnrollLoading(false);
+        if (active) {
+          setErrorMsg('Supabase is not configured. Please define NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in your deployment settings.');
+          setEnrollLoading(false);
+        }
         return;
       }
 
@@ -32,25 +42,29 @@ export default function Setup2FAPage() {
         // 1. Fetch any existing factors to clean up unverified duplicates
         const { data: factorsData, error: factorsError } = await supabase.auth.mfa.listFactors();
         if (factorsError) {
-          setErrorMsg(factorsError.message);
-          setEnrollLoading(false);
+          if (active) {
+            setErrorMsg(factorsError.message);
+            setEnrollLoading(false);
+          }
           return;
         }
 
-        const allFactors = Array.isArray(factorsData)
+        const allFactors = (Array.isArray(factorsData)
           ? factorsData
           : [
               ...(factorsData?.all || []),
               ...(factorsData?.totp || []),
               ...(factorsData?.phone || [])
-            ].filter((f, index, self) => self.findIndex(t => t.id === f.id) === index); // De-duplicate
+            ].filter((f, index, self) => self.findIndex(t => t.id === f.id) === index)) as MFAFactor[]; // De-duplicate
 
-        setDebugFactors(allFactors);
+        if (active) {
+          setDebugFactors(allFactors);
+        }
 
         // If a verified factor is already present, redirect to the dashboard
         const verifiedFactor = allFactors.find(f => f.status === 'verified');
         if (verifiedFactor) {
-          router.push('/admin');
+          if (active) router.push('/admin');
           return;
         }
 
@@ -60,20 +74,25 @@ export default function Setup2FAPage() {
           const { error: unenrollError } = await supabase.auth.mfa.unenroll({ factorId: f.id });
           if (unenrollError) {
             console.error("Failed to unenroll:", unenrollError);
-            setErrorMsg(`Failed to clean up unverified factor (${f.id}): ${unenrollError.message}`);
           }
         }
 
+        if (!active) return;
+
         // Fetch factors again after cleanup to update debug info
         const { data: cleanFactorsData } = await supabase.auth.mfa.listFactors();
-        const cleanAllFactors = Array.isArray(cleanFactorsData)
-          ? cleanFactorsData
-          : [
-              ...(cleanFactorsData?.all || []),
-              ...(cleanFactorsData?.totp || []),
-              ...(cleanFactorsData?.phone || [])
-            ].filter((f, index, self) => self.findIndex(t => t.id === f.id) === index);
-        setDebugFactors(cleanAllFactors);
+        if (cleanFactorsData && active) {
+          const cleanAllFactors = (Array.isArray(cleanFactorsData)
+            ? cleanFactorsData
+            : [
+                ...(cleanFactorsData?.all || []),
+                ...(cleanFactorsData?.totp || []),
+                ...(cleanFactorsData?.phone || [])
+              ].filter((f, index, self) => self.findIndex(t => t.id === f.id) === index)) as MFAFactor[];
+          setDebugFactors(cleanAllFactors);
+        }
+
+        if (!active) return;
 
         // 2. Perform the fresh enrollment with a unique friendlyName to guarantee no collisions
         const { data, error } = await supabase.auth.mfa.enroll({
@@ -82,21 +101,49 @@ export default function Setup2FAPage() {
           friendlyName: `Admin TOTP - ${Date.now()}`
         });
 
+        if (!active) return;
+
         if (error) {
           setErrorMsg(error.message);
         } else if (data) {
           setFactorId(data.id);
-          setQrCodeSvg(data.totp.qr_code);
           setSecret(data.totp.secret);
+
+          // Generate a base64 encoded data URL for the SVG to ensure reliable rendering and scanning (especially in dark mode)
+          const cleanSvg = data.totp.qr_code.replace(/^data:image\/svg\+xml;utf-?8,/, '');
+          try {
+            const base64 = btoa(cleanSvg);
+            setQrCodeDataUrl(`data:image/svg+xml;base64,${base64}`);
+          } catch (e) {
+            console.error('Failed to encode QR code SVG to base64', e);
+            setQrCodeDataUrl(data.totp.qr_code); // Fallback
+          }
+
+          // Update diagnostics debug factors with the newly enrolled factor
+          setDebugFactors([{
+            id: data.id,
+            factor_type: 'totp',
+            status: 'unverified'
+          }]);
         }
-      } catch (err: any) {
-        setErrorMsg(err.message || 'Failed to initialize two-factor authentication setup.');
+      } catch (err: unknown) {
+        if (active) {
+          const message = err instanceof Error ? err.message : String(err);
+          setErrorMsg(message || 'Failed to initialize two-factor authentication setup.');
+        }
       } finally {
-        setEnrollLoading(false);
+        if (active) {
+          setEnrollLoading(false);
+        }
       }
     }
 
     startEnrollment();
+
+    return () => {
+      active = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleVerify = async (e: React.FormEvent) => {
@@ -113,7 +160,7 @@ export default function Setup2FAPage() {
     setSuccessMsg('');
 
     try {
-      const { data, error } = await supabase.auth.mfa.challengeAndVerify({
+      const { error } = await supabase.auth.mfa.challengeAndVerify({
         factorId,
         code: code.trim(),
       });
@@ -126,8 +173,9 @@ export default function Setup2FAPage() {
           router.push('/admin');
         }, 1500);
       }
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Could not verify the authenticator code. Please try again.');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      setErrorMsg(message || 'Could not verify the authenticator code. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -208,29 +256,23 @@ export default function Setup2FAPage() {
         ) : (
           factorId && (
             <form onSubmit={handleVerify} style={{ display: 'flex', flexDirection: 'column', gap: '20px', alignItems: 'center' }}>
-              <div 
+              <img 
+                src={qrCodeDataUrl} 
+                alt="MFA QR Code"
                 style={{ 
                   background: '#ffffff', 
                   padding: '16px', 
                   borderRadius: '16px', 
                   border: '2px solid var(--border-color)',
-                  display: 'flex',
-                  justifyContent: 'center',
-                  alignItems: 'center',
+                  display: 'block',
                   width: '220px',
                   height: '220px'
-                }}
-                dangerouslySetInnerHTML={{ 
-                  __html: (() => {
-                    const cleanSvg = qrCodeSvg.replace(/^data:image\/svg\+xml;utf-?8,/, '');
-                    return cleanSvg.replace('<svg', '<svg style="width: 100%; height: 100%; display: block;"');
-                  })()
                 }}
               />
               
               {secret && (
                 <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                  Can't scan? Enter manually: <code style={{ background: '#E2E2D1', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold', fontSize: '0.9rem', color: '#000' }}>{secret}</code>
+                  {"Can't scan? Enter manually: "} <code style={{ background: '#E2E2D1', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold', fontSize: '0.9rem', color: '#000' }}>{secret}</code>
                 </div>
               )}
 
