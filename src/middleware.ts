@@ -2,7 +2,7 @@ import { createServerClient } from '@supabase/ssr';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-export async function proxy(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const isApiRoute = pathname.startsWith('/api/');
 
@@ -14,7 +14,7 @@ export async function proxy(request: NextRequest) {
     request,
   });
 
-  // Ensure these exist and are valid URLs, to avoid proxy crash
+  // Ensure these exist and are valid URLs, to avoid middleware crash
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -56,8 +56,6 @@ export async function proxy(request: NextRequest) {
       }
     );
   }
-
-
 
   const supabase = createServerClient(
     supabaseUrl,
