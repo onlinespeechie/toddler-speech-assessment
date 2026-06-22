@@ -15,6 +15,7 @@ export default function Setup2FAPage() {
   const [enrollLoading, setEnrollLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [debugFactors, setDebugFactors] = useState<any[]>([]);
 
   const router = useRouter();
   const supabase = createClient();
@@ -39,6 +40,7 @@ export default function Setup2FAPage() {
         const totpFactors = factorsData?.totp || [];
         const phoneFactors = factorsData?.phone || [];
         const allFactors = [...totpFactors, ...phoneFactors];
+        setDebugFactors(allFactors);
 
         // If a verified factor is already present, redirect to the dashboard
         const verifiedFactor = allFactors.find(f => f.status === 'verified');
@@ -50,8 +52,16 @@ export default function Setup2FAPage() {
         // Unenroll any dangling unverified factors from previous setup attempts
         const unverifiedFactors = allFactors.filter(f => f.status === 'unverified');
         for (const f of unverifiedFactors) {
-          await supabase.auth.mfa.unenroll({ id: f.id });
+          const { error: unenrollError } = await supabase.auth.mfa.unenroll({ id: f.id });
+          if (unenrollError) {
+            console.error("Failed to unenroll:", unenrollError);
+            setErrorMsg(`Failed to clean up unverified factor (${f.id}): ${unenrollError.message}`);
+          }
         }
+
+        // Fetch factors again after cleanup to update debug info
+        const { data: cleanFactorsData } = await supabase.auth.mfa.listFactors();
+        setDebugFactors([...(cleanFactorsData?.totp || []), ...(cleanFactorsData?.phone || [])]);
 
         // 2. Perform the fresh enrollment
         const { data, error } = await supabase.auth.mfa.enroll({
@@ -132,9 +142,37 @@ export default function Setup2FAPage() {
             borderRadius: '12px', 
             marginBottom: '16px', 
             fontWeight: 600,
-            fontSize: '0.9rem' 
+            fontSize: '0.9rem',
+            textAlign: 'left'
           }}>
             {errorMsg}
+          </div>
+        )}
+
+        {/* Debug Box */}
+        {errorMsg && (
+          <div style={{ 
+            backgroundColor: '#fef3c7', 
+            border: '2px solid #d97706', 
+            color: '#78350f', 
+            padding: '16px', 
+            borderRadius: '12px', 
+            marginBottom: '16px', 
+            textAlign: 'left',
+            fontSize: '0.85rem'
+          }}>
+            <strong style={{ display: 'block', marginBottom: '8px' }}>Existing Factors (Diagnostics):</strong>
+            {debugFactors.length === 0 ? (
+              <div>No factors found for this user in Supabase.</div>
+            ) : (
+              debugFactors.map((f, i) => (
+                <div key={f.id} style={{ marginBottom: i < debugFactors.length - 1 ? '6px' : 0 }}>
+                  <strong>Factor #{i + 1}:</strong> {f.factor_type} | 
+                  <strong>Status:</strong> {f.status} | 
+                  <strong>ID:</strong> <code style={{ background: 'rgba(255,255,255,0.4)', padding: '2px 4px', borderRadius: '4px' }}>{f.id.slice(0, 8)}...</code>
+                </div>
+              ))
+            )}
           </div>
         )}
         {successMsg && (
