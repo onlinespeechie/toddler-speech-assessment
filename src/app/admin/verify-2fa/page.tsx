@@ -41,14 +41,16 @@ export default function Verify2FAPage() {
             router.push('/admin/setup-2fa');
           }
         }
-      } catch (err: any) {
-        setErrorMsg(err.message || 'Failed to check verification settings.');
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        setErrorMsg(message || 'Failed to check verification settings.');
       } finally {
         setCheckLoading(false);
       }
     }
 
     checkFactors();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleVerify = async (e: React.FormEvent) => {
@@ -65,7 +67,7 @@ export default function Verify2FAPage() {
     setSuccessMsg('');
 
     try {
-      const { data, error } = await supabase.auth.mfa.challengeAndVerify({
+      const { error } = await supabase.auth.mfa.challengeAndVerify({
         factorId,
         code: code.trim(),
       });
@@ -74,10 +76,13 @@ export default function Verify2FAPage() {
         setErrorMsg(error.message);
       } else {
         setSuccessMsg('Security code verified. Redirecting...');
-        router.push('/admin');
+        setTimeout(() => {
+          window.location.href = '/admin';
+        }, 1500);
       }
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Verification failed. Please check the code and try again.');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      setErrorMsg(message || 'Verification failed. Please check the code and try again.');
     } finally {
       setLoading(false);
     }

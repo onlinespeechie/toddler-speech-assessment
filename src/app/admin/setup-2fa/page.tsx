@@ -170,7 +170,7 @@ export default function Setup2FAPage() {
       } else {
         setSuccessMsg('Two-factor authentication successfully enabled. Redirecting...');
         setTimeout(() => {
-          router.push('/admin');
+          window.location.href = '/admin';
         }, 1500);
       }
     } catch (err: unknown) {
