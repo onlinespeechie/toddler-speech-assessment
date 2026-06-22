@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 
+export const dynamic = 'force-dynamic';
+
 export default function Setup2FAPage() {
   const [factorId, setFactorId] = useState('');
   const [qrCodeSvg, setQrCodeSvg] = useState('');
@@ -19,6 +21,12 @@ export default function Setup2FAPage() {
 
   useEffect(() => {
     async function startEnrollment() {
+      if (!supabase || !supabase.auth) {
+        setErrorMsg('Supabase is not configured. Please define NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in your deployment settings.');
+        setEnrollLoading(false);
+        return;
+      }
+
       try {
         const { data, error } = await supabase.auth.mfa.enroll({
           factorType: 'totp',
@@ -45,6 +53,11 @@ export default function Setup2FAPage() {
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!factorId) return;
+
+    if (!supabase || !supabase.auth) {
+      setErrorMsg('Supabase is not configured. Please define NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in your deployment settings.');
+      return;
+    }
 
     setLoading(true);
     setErrorMsg('');
