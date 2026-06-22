@@ -14,14 +14,17 @@ export async function proxy(request: NextRequest) {
     request,
   });
 
-  // Ensure these exist, if they don't, gracefully let it fail on client init to avoid proxy crash
+  // Ensure these exist and are valid URLs, to avoid proxy crash
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  if (!supabaseUrl || !supabaseAnonKey) {
+  const isUrlValid = supabaseUrl && (supabaseUrl.startsWith('http://') || supabaseUrl.startsWith('https://'));
+
+  if (!isUrlValid || !supabaseAnonKey || supabaseAnonKey === 'undefined' || supabaseAnonKey === 'your_anon_key_here') {
     // If not configured yet, skip proxy to avoid breaking other parts of the app during setup
     return supabaseResponse;
   }
+
 
   const supabase = createServerClient(
     supabaseUrl,
