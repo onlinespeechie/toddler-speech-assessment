@@ -28,6 +28,32 @@ export default function Setup2FAPage() {
       }
 
       try {
+        // 1. Fetch any existing factors to clean up unverified duplicates
+        const { data: factorsData, error: factorsError } = await supabase.auth.mfa.listFactors();
+        if (factorsError) {
+          setErrorMsg(factorsError.message);
+          setEnrollLoading(false);
+          return;
+        }
+
+        const totpFactors = factorsData?.totp || [];
+        const phoneFactors = factorsData?.phone || [];
+        const allFactors = [...totpFactors, ...phoneFactors];
+
+        // If a verified factor is already present, redirect to the dashboard
+        const verifiedFactor = allFactors.find(f => f.status === 'verified');
+        if (verifiedFactor) {
+          router.push('/admin');
+          return;
+        }
+
+        // Unenroll any dangling unverified factors from previous setup attempts
+        const unverifiedFactors = allFactors.filter(f => f.status === 'unverified');
+        for (const f of unverifiedFactors) {
+          await supabase.auth.mfa.unenroll({ id: f.id });
+        }
+
+        // 2. Perform the fresh enrollment
         const { data, error } = await supabase.auth.mfa.enroll({
           factorType: 'totp',
           issuer: 'Online Speechie',
