@@ -33,6 +33,14 @@ export async function middleware(request: NextRequest) {
     if (isApiRoute) {
       return NextResponse.json({ error: 'Supabase configuration is missing' }, { status: 500 });
     }
+
+    const urlDebug = supabaseUrl 
+      ? `Detected (Length: ${supabaseUrl.length}, Starts with: "${supabaseUrl.slice(0, 8)}")` 
+      : 'Not Detected';
+    const keyDebug = supabaseAnonKey 
+      ? `Detected (Length: ${supabaseAnonKey.length}, Starts with: "${supabaseAnonKey.slice(0, 8)}...")` 
+      : 'Not Detected';
+
     return new NextResponse(
       `<html>
         <head>
@@ -40,12 +48,25 @@ export async function middleware(request: NextRequest) {
           <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600;700&display=swap" rel="stylesheet">
         </head>
         <body style="font-family: 'Quicksand', sans-serif; background-color: #F1F1E6; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; padding: 20px; box-sizing: border-box;">
-          <div style="background: #ffffff; border: 2px solid #BCBCA7; padding: 40px; border-radius: 20px; box-shadow: -8px 8px 0px #BCBCA7; max-width: 480px; width: 100%; text-align: center; box-sizing: border-box;">
+          <div style="background: #ffffff; border: 2px solid #BCBCA7; padding: 40px; border-radius: 20px; box-shadow: -8px 8px 0px #BCBCA7; max-width: 520px; width: 100%; text-align: center; box-sizing: border-box;">
             <img src="https://onlinespeechie.com/wp-content/uploads/2024/03/os-logo-new.png" alt="Logo" style="height: 40px; margin-bottom: 24px;">
             <h2 style="margin: 0 0 16px 0; font-size: 1.8rem; font-weight: 700; color: #333333;">Admin Panel Locked</h2>
             <p style="color: #666666; margin: 0 0 24px 0; line-height: 1.6; font-size: 1rem; font-weight: 500;">
               This administrative panel is locked because the required Supabase environment variables (<code>NEXT_PUBLIC_SUPABASE_URL</code> and <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code>) are not configured on the live server.
             </p>
+
+            <div style="background: #fef3c7; border: 2px solid #d97706; border-radius: 12px; padding: 16px; margin-bottom: 24px; text-align: left; font-size: 0.9rem; color: #78350f;">
+              <strong style="display: block; margin-bottom: 8px;">Environment Variables Status (Debug):</strong>
+              <div style="margin-bottom: 6px;">
+                <span style="font-weight: 600;">NEXT_PUBLIC_SUPABASE_URL:</span> 
+                <span style="font-family: monospace; background: rgba(255,255,255,0.5); padding: 2px 6px; border-radius: 4px; margin-left: 4px;">${urlDebug}</span>
+              </div>
+              <div>
+                <span style="font-weight: 600;">NEXT_PUBLIC_SUPABASE_ANON_KEY:</span> 
+                <span style="font-family: monospace; background: rgba(255,255,255,0.5); padding: 2px 6px; border-radius: 4px; margin-left: 4px;">${keyDebug}</span>
+              </div>
+            </div>
+
             <div style="background: #fafaf5; border: 2px solid #BCBCA7; border-radius: 12px; padding: 16px; margin-bottom: 24px; text-align: left; font-size: 0.9rem; line-height: 1.5; color: #333333;">
               <strong>Required Steps:</strong>
               <ol style="margin: 8px 0 0 20px; padding: 0;">
