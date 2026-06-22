@@ -37,9 +37,14 @@ export default function Setup2FAPage() {
           return;
         }
 
-        const totpFactors = factorsData?.totp || [];
-        const phoneFactors = factorsData?.phone || [];
-        const allFactors = [...totpFactors, ...phoneFactors];
+        const allFactors = Array.isArray(factorsData)
+          ? factorsData
+          : [
+              ...(factorsData?.all || []),
+              ...(factorsData?.totp || []),
+              ...(factorsData?.phone || [])
+            ].filter((f, index, self) => self.findIndex(t => t.id === f.id) === index); // De-duplicate
+
         setDebugFactors(allFactors);
 
         // If a verified factor is already present, redirect to the dashboard
@@ -61,12 +66,20 @@ export default function Setup2FAPage() {
 
         // Fetch factors again after cleanup to update debug info
         const { data: cleanFactorsData } = await supabase.auth.mfa.listFactors();
-        setDebugFactors([...(cleanFactorsData?.totp || []), ...(cleanFactorsData?.phone || [])]);
+        const cleanAllFactors = Array.isArray(cleanFactorsData)
+          ? cleanFactorsData
+          : [
+              ...(cleanFactorsData?.all || []),
+              ...(cleanFactorsData?.totp || []),
+              ...(cleanFactorsData?.phone || [])
+            ].filter((f, index, self) => self.findIndex(t => t.id === f.id) === index);
+        setDebugFactors(cleanAllFactors);
 
-        // 2. Perform the fresh enrollment
+        // 2. Perform the fresh enrollment with a unique friendlyName to guarantee no collisions
         const { data, error } = await supabase.auth.mfa.enroll({
           factorType: 'totp',
           issuer: 'Online Speechie',
+          friendlyName: `Admin TOTP - ${Date.now()}`
         });
 
         if (error) {
