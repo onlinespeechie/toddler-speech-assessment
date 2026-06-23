@@ -366,8 +366,8 @@ export default function ResultsPage({ submissionResult, onRestart }: ResultsPage
               Whether your child needs a little boost or more ongoing support, <span style={{ fontWeight: 'bold' }}>Ready, Set…Talk!™</span> helps you stop second-guessing and start feeling capable, confident, and clear about how to help.
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-              <div style={{ fontWeight: 'bold', fontSize: '32px', lineHeight: '32px', color: '#ffffff' }}>
-                All for just $189
+              <div style={{ fontWeight: 'bold', fontSize: '32px', lineHeight: '32px', color: '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                All for just <span style={{ position: 'relative', display: 'inline-block' }}>$397<span style={{ position: 'absolute', left: 0, top: '50%', width: '100%', height: '3px', backgroundColor: '#ffffff', transform: 'rotate(-15deg)', pointerEvents: 'none' }} /></span> → $297
               </div>
               <a 
                 href={ctaLink}
@@ -452,8 +452,8 @@ export default function ResultsPage({ submissionResult, onRestart }: ResultsPage
           <p style={{ fontSize: '16px', color: 'rgba(255,255,255,0.9)', margin: 0 }}>
             6 months of access • Watch anytime • 30-day confidence guarantee
           </p>
-          <h2 style={{ fontWeight: 'bold', fontSize: '34px', lineHeight: '34px', color: '#ffffff', margin: '0 0 8px 0' }}>
-            All for just $189
+          <h2 style={{ fontWeight: 'bold', fontSize: '34px', lineHeight: '34px', color: '#ffffff', margin: '0 0 8px 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+            All for just <span style={{ position: 'relative', display: 'inline-block' }}>$397<span style={{ position: 'absolute', left: 0, top: '50%', width: '100%', height: '3px', backgroundColor: '#ffffff', transform: 'rotate(-15deg)', pointerEvents: 'none' }} /></span> → $297
           </h2>
           <a 
             href={ctaLink}
