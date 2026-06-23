@@ -532,10 +532,6 @@ export default function AssessmentApp() {
           />
         )
       )}
-
-      <div style={{ marginTop: 'auto', paddingTop: '40px', fontSize: '0.9rem', color: 'var(--text-muted)' }}>
-        <a href="/admin" style={{ color: 'inherit', textDecoration: 'none' }}>Admin Panel</a>
-      </div>
     </main>
     </>
   );
