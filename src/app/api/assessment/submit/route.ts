@@ -151,11 +151,11 @@ export async function POST(req: Request) {
       // 2. PHRASE USER
       else if (
         isSometimes('Q56') || // 3-4 word sentences (sometimes)
+        isSometimes('Q64') || // grammatically correct sentences (sometimes)
         isAlwaysMostlyOrNormally('Q44') || // short phrases, different ideas
         isAlwaysMostlyOrNormally('Q42') || // copies 2-word phrases
         isAlwaysMostlyOrNormally('Q52') || // copies 2-word phrases
-        isAlwaysMostlyOrNormally('Q66') || // puts 2+ words together
-        isAlwaysMostlyOrNormally('Q58')    // labels actions in pictures
+        isAlwaysMostlyOrNormally('Q66')    // puts 2+ words together
       ) {
         commStage = "PHRASE USER";
       }
@@ -168,7 +168,8 @@ export async function POST(req: Request) {
         isYes('Q50') || // names at least 1 picture
         isYes('Q54') || // names at least 1 picture
         isYes('Q60') || // tells own name
-        isYes('Q62')    // tells own name
+        isYes('Q62') || // tells own name
+        isAlwaysMostlyOrNormally('Q58') // labels actions in pictures
       ) {
         commStage = "SINGLE WORD USER";
       }
