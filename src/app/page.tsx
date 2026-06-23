@@ -73,37 +73,6 @@ export default function AssessmentApp() {
     } catch(e) { return url; }
   };
 
-  const calculateAgeDetail = (dobString: string) => {
-    if (!dobString) return null;
-    const dob = new Date(dobString);
-    if (isNaN(dob.getTime())) return null;
-    const today = new Date();
-    
-    if (dob > today) return "Date of birth cannot be in the future";
-    
-    let years = today.getFullYear() - dob.getFullYear();
-    let months = today.getMonth() - dob.getMonth();
-    let days = today.getDate() - dob.getDate();
-    
-    if (days < 0) {
-      const prevMonth = new Date(today.getFullYear(), today.getMonth(), 0);
-      days += prevMonth.getDate();
-      months--;
-    }
-    
-    if (months < 0) {
-      months += 12;
-      years--;
-    }
-    
-    const parts = [];
-    if (years > 0) parts.push(`${years} ${years === 1 ? 'year' : 'years'}`);
-    if (months > 0) parts.push(`${months} ${months === 1 ? 'month' : 'months'}`);
-    if (days > 0 || parts.length === 0) parts.push(`${days} ${days === 1 ? 'day' : 'days'}`);
-    
-    return `Age calculated: ${parts.join(', ')}`;
-  };
-
   const [step, setStep] = useState<'age' | 'quiz' | 'ics' | 'contact' | 'result'>('age');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   
@@ -322,29 +291,6 @@ export default function AssessmentApp() {
                   suppressHydrationWarning
                 />
               </div>
-
-              {childDoB && (
-                <div 
-                  className="dev-debug-element"
-                  style={{
-                    marginTop: '8px',
-                    marginBottom: '16px',
-                    padding: '12px',
-                    backgroundColor: '#fee2e2',
-                    border: '2px dashed #ef4444',
-                    borderRadius: '8px',
-                    color: '#991b1b',
-                    fontSize: '0.95rem',
-                    fontWeight: 600,
-                    textAlign: 'center'
-                  }}
-                >
-                  <span style={{ textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '0.05em', color: '#ef4444', display: 'block', marginBottom: '4px' }}>
-                    [DEV/TEST DEBUG ELEMENT]
-                  </span>
-                  {calculateAgeDetail(childDoB)}
-                </div>
-              )}
 
               <button type="submit" className="btn btn-start" style={{ width: '100%', marginTop: '16px' }} disabled={loading}>
                 {loading ? 'Loading Questions...' : 'Start Quiz'}
