@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma';
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { parentName, parentEmail, childFirstName, childDoB, totalScore, finalTag, answers } = body;
+    const { parentName, parentEmail, childFirstName, childDoB, totalScore, finalTag, answers, sessionId } = body;
 
     if (!parentName || !parentEmail || !childDoB) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -215,6 +215,20 @@ export async function POST(req: Request) {
         }
       }
     });
+
+    if (sessionId) {
+      try {
+        await prisma.quizSession.update({
+          where: { id: sessionId },
+          data: {
+            completedAt: new Date(),
+            submissionId: submission.id
+          }
+        });
+      } catch (err) {
+        console.error("Failed to update QuizSession for sessionId:", sessionId, err);
+      }
+    }
 
     // --- ConvertKit CRM Sync ---
     try {

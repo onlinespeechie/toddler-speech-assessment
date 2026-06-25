@@ -67,7 +67,13 @@ export async function POST(req: Request) {
       }
     });
 
+    // Create a new QuizSession
+    const session = await prisma.quizSession.create({
+      data: {}
+    });
+
     return NextResponse.json({
+      sessionId: session.id,
       ageMonths,
       sequence,
       icsSequence

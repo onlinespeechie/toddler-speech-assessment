@@ -231,6 +231,9 @@ export default function AdminPanel() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
         <h1 style={{ fontSize: '2.5rem', margin: 0 }}>Admin Dashboard</h1>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <Link href="/admin/analytics" className="btn btn-primary" style={{ textDecoration: 'none', padding: '8px 16px', background: 'var(--primary)', color: '#000', border: '2px solid #000' }}>
+            View Analytics
+          </Link>
           <Link href="/admin/submissions" className="btn btn-primary" style={{ textDecoration: 'none', padding: '8px 16px' }}>
             View Submissions
           </Link>

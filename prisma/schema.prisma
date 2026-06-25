@@ -64,6 +64,7 @@ model Submission {
   communicationStage String   @default("Unknown")
   speechClarity      String?
   answers            Answer[]
+  quizSession        QuizSession?
 }
 
 model Answer {
@@ -75,4 +76,12 @@ model Answer {
   submission   Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
 
   @@index([submissionId])
+}
+
+model QuizSession {
+  id           String      @id @default(cuid())
+  createdAt    DateTime    @default(now())
+  completedAt  DateTime?
+  submissionId String?     @unique
+  submission   Submission? @relation(fields: [submissionId], references: [id], onDelete: Cascade)
 }

@@ -93,6 +93,7 @@ export default function AssessmentApp() {
 
   const [submissionResult, setSubmissionResult] = useState<any>(null);
   const [submissionId, setSubmissionId] = useState<string | null>(null);
+  const [sessionId, setSessionId] = useState<string | null>(null);
 
   // 1. Submit DoB only to get Sequence
   const handleStartAge = async (e: React.FormEvent) => {
@@ -115,7 +116,7 @@ export default function AssessmentApp() {
         body: JSON.stringify({ childDoB }),
       });
 
-      const data: AssessmentData & { outOfRange?: boolean; calculated_age_months?: number; error?: string } = await res.json();
+      const data: AssessmentData & { outOfRange?: boolean; calculated_age_months?: number; error?: string; sessionId?: string } = await res.json();
       if (!res.ok) {
         if (data.outOfRange) {
           if (typeof window !== 'undefined') {
@@ -140,6 +141,7 @@ export default function AssessmentApp() {
 
       setSequence(data.sequence);
       setIcsSequence(data.icsSequence);
+      setSessionId(data.sessionId || null);
       setStep('quiz');
     } catch (err: any) {
       setError(err.message);
@@ -216,7 +218,8 @@ export default function AssessmentApp() {
           childFirstName,
           childDoB,
           totalScore: score,
-          answers: pastAnswers
+          answers: pastAnswers,
+          sessionId
         }),
       });
       const data = await res.json();

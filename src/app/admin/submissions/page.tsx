@@ -35,10 +35,16 @@ export default async function SubmissionsPage() {
   return (
     <div style={{ padding: '40px', maxWidth: '1200px', margin: '0 auto', fontFamily: "'Quicksand', sans-serif" }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
-        <h1 style={{ fontSize: '2.5rem' }}>Submissions List</h1>
-        <Link href="/admin" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>
-          &larr; Back to Admin
-        </Link>
+        <h1 style={{ fontSize: '2.5rem', margin: 0 }}>Submissions List</h1>
+        <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+          <Link href="/admin/analytics" style={{ color: 'var(--text-muted)', textDecoration: 'none', fontWeight: 600 }}>
+            Analytics
+          </Link>
+          <span style={{ color: '#ccc' }}>|</span>
+          <Link href="/admin" style={{ color: 'var(--text-muted)', textDecoration: 'none', fontWeight: 600 }}>
+            &larr; Back to Admin
+          </Link>
+        </div>
       </div>
 
       <div className="card-panel" style={{ overflowX: 'auto', padding: '24px' }}>
