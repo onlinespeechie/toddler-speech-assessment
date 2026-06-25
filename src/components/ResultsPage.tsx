@@ -52,7 +52,7 @@ export default function ResultsPage({ submissionResult, onRestart }: ResultsPage
     { id: 4, text: "He's now saying his first words and even linking them together - it's incredible to see his progress!", author: "Rebekah H.", img: "/Rebekah H.jpg" }
   ];
 
-  const ctaLink = "https://onlinespeechie.com/checkout/?add-to-cart=9249";
+  const ctaLink = "https://onlinespeechie.com/osbundle?OS_BUNDLE_PRODUCT_IDS=9249&OS_BUNDLE_QTYS=1&OS_BUNDLE_COUPON=quizrst100&OS_BUNDLE_DEFAULT_REDIRECT=checkout";
 
   return (
     <div style={{ width: '100%', backgroundColor: '#ffffff', color: '#383838', fontFamily: 'inherit' }}>
