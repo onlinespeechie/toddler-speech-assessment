@@ -367,7 +367,7 @@ export default function ResultsPage({ submissionResult, onRestart }: ResultsPage
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
               <div style={{ fontWeight: 'bold', fontSize: '32px', lineHeight: '32px', color: '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                All for just <span style={{ position: 'relative', display: 'inline-block', fontSize: '0.85em' }}>$397<span style={{ position: 'absolute', left: 0, top: '50%', width: '100%', height: '3px', backgroundColor: '#ef4444', transform: 'rotate(-15deg)', pointerEvents: 'none' }} /></span> → <span style={{ fontSize: '1.1em' }}>$297</span>
+                All for just <span style={{ position: 'relative', display: 'inline-block', fontSize: '0.85em' }}>$397<span style={{ position: 'absolute', left: 0, top: '50%', width: '100%', height: '3px', backgroundColor: '#D18AFF', transform: 'rotate(-15deg)', pointerEvents: 'none' }} /></span> → <span style={{ fontSize: '1.1em' }}>$297</span>
               </div>
               <a 
                 href={ctaLink}
@@ -453,7 +453,7 @@ export default function ResultsPage({ submissionResult, onRestart }: ResultsPage
             6 months of access • Watch anytime • 30-day confidence guarantee
           </p>
           <h2 style={{ fontWeight: 'bold', fontSize: '34px', lineHeight: '34px', color: '#ffffff', margin: '0 0 8px 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-            All for just <span style={{ position: 'relative', display: 'inline-block', fontSize: '0.85em' }}>$397<span style={{ position: 'absolute', left: 0, top: '50%', width: '100%', height: '3px', backgroundColor: '#ef4444', transform: 'rotate(-15deg)', pointerEvents: 'none' }} /></span> → <span style={{ fontSize: '1.1em' }}>$297</span>
+            All for just <span style={{ position: 'relative', display: 'inline-block', fontSize: '0.85em' }}>$397<span style={{ position: 'absolute', left: 0, top: '50%', width: '100%', height: '3px', backgroundColor: '#2FBCAC', transform: 'rotate(-15deg)', pointerEvents: 'none' }} /></span> → <span style={{ fontSize: '1.1em' }}>$297</span>
           </h2>
           <a 
             href={ctaLink}
