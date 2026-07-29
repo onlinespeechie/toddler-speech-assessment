@@ -11,8 +11,14 @@ function cleanEnvValue(value: string | undefined): string | undefined {
   return cleaned.trim();
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // Bypass auth middleware checks in local development
+  if (process.env.NODE_ENV === 'development') {
+    return NextResponse.next();
+  }
+
   const isApiRoute = pathname.startsWith('/api/');
 
   const loginPath = '/admin/login';

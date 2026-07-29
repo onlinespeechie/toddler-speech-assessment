@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import ResultsPage from '../components/ResultsPage';
 
 type Option = {
@@ -95,6 +95,28 @@ export default function AssessmentApp() {
   const [submissionId, setSubmissionId] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
 
+  useEffect(() => {
+    // Check if sessionId is in sessionStorage
+    const cachedSessionId = sessionStorage.getItem('quiz_session_id');
+    if (cachedSessionId) {
+      setSessionId(cachedSessionId);
+    } else {
+      // Create a new session
+      fetch('/api/assessment/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.sessionId) {
+          setSessionId(data.sessionId);
+          sessionStorage.setItem('quiz_session_id', data.sessionId);
+        }
+      })
+      .catch(err => console.error("Failed to initialize landing session:", err));
+    }
+  }, []);
+
   // 1. Submit DoB only to get Sequence
   const handleStartAge = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -113,7 +135,7 @@ export default function AssessmentApp() {
           'ngrok-skip-browser-warning': 'true'
         },
         credentials: 'include',
-        body: JSON.stringify({ childDoB }),
+        body: JSON.stringify({ childDoB, sessionId }),
       });
 
       const data: AssessmentData & { outOfRange?: boolean; calculated_age_months?: number; error?: string; sessionId?: string } = await res.json();
@@ -172,9 +194,24 @@ export default function AssessmentApp() {
     }
 
     if (currentQuestionIndex < allPlacements.length - 1) {
-      setCurrentQuestionIndex(currentQuestionIndex + 1);
+      const nextIndex = currentQuestionIndex + 1;
+      setCurrentQuestionIndex(nextIndex);
+      if (sessionId) {
+        fetch('/api/assessment/session', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId, currentStep: nextIndex + 1 }),
+        }).catch(err => console.error("Failed to update progress:", err));
+      }
     } else {
       setStep('contact');
+      if (sessionId) {
+        fetch('/api/assessment/session', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId, currentStep: allPlacements.length + 1 }),
+        }).catch(err => console.error("Failed to update progress:", err));
+      }
     }
   };
 
@@ -186,7 +223,15 @@ export default function AssessmentApp() {
         setScore(score - lastAnswer.weight);
       }
       setPastAnswers(pastAnswers.slice(0, -1));
-      setCurrentQuestionIndex(currentQuestionIndex - 1);
+      const prevIndex = currentQuestionIndex - 1;
+      setCurrentQuestionIndex(prevIndex);
+      if (sessionId) {
+        fetch('/api/assessment/session', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId, currentStep: prevIndex + 1 }),
+        }).catch(err => console.error("Failed to update progress:", err));
+      }
     }
   };
 
@@ -228,6 +273,12 @@ export default function AssessmentApp() {
       setSubmissionResult(data.submission);
       setSubmissionId(data.submission.id);
       setStep('result');
+      sessionStorage.removeItem('quiz_session_id');
+
+      // Fire standard Meta Pixel event without any custom payload/metadata
+      if (typeof window !== 'undefined' && (window as any).fbq) {
+        (window as any).fbq('track', 'Lead');
+      }
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -310,7 +361,21 @@ export default function AssessmentApp() {
               <div suppressHydrationWarning style={{ fontSize: '1.1rem', fontWeight: 500 }}>{childDoB ? new Date(childDoB).toLocaleDateString() : ''}</div>
             </div>
             <button 
-              onClick={() => { setStep('age'); setSequence(null); setIcsSequence(null); setScore(0); setPastAnswers([]); setCurrentQuestionIndex(0); }}
+              onClick={() => {
+                setStep('age');
+                setSequence(null);
+                setIcsSequence(null);
+                setScore(0);
+                setPastAnswers([]);
+                setCurrentQuestionIndex(0);
+                if (sessionId) {
+                  fetch('/api/assessment/session', {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sessionId, currentStep: 0 }),
+                  }).catch(err => console.error("Failed to update progress:", err));
+                }
+              }}
               className="btn btn-secondary"
               style={{ padding: '8px 16px', fontSize: '0.9rem' }}
             >

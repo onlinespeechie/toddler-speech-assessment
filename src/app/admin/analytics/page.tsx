@@ -12,6 +12,12 @@ import {
   AlertCircle
 } from 'lucide-react';
 
+interface FunnelStep {
+  name: string;
+  count: number;
+  percentage: number;
+}
+
 interface AnalyticsData {
   starts: number;
   completions: number;
@@ -21,6 +27,7 @@ interface AnalyticsData {
     startDate: string;
     endDate: string;
   };
+  funnel?: FunnelStep[];
 }
 
 export default function AnalyticsDashboard() {
@@ -30,6 +37,7 @@ export default function AnalyticsDashboard() {
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
   const fetchAnalytics = useCallback(async () => {
     setLoading(true);
@@ -424,6 +432,307 @@ export default function AnalyticsDashboard() {
             </div>
 
           </div>
+
+          {/* User Drop-off Funnel */}
+          {data.funnel && data.funnel.length > 0 && (
+            <div 
+              className="card-panel animate-fade-in" 
+              style={{ 
+                backgroundColor: '#ffffff', 
+                padding: '32px',
+                marginBottom: '32px',
+                border: '2px solid var(--border-color, #e2e8f0)',
+                borderRadius: '16px',
+                boxShadow: 'none'
+              }}
+            >
+              <h2 style={{ fontSize: '1.6rem', fontWeight: 700, margin: '0 0 8px 0', color: 'var(--text-main)' }}>
+                User Drop-off Funnel
+              </h2>
+              <p style={{ color: 'var(--text-muted)', marginBottom: '32px', fontSize: '0.95rem' }}>
+                Analyze how users progress through each stage of the questionnaire, identifying exactly where they drop off.
+              </p>
+
+              {/* Visual Funnel Line/Area Graph */}
+              <div style={{ position: 'relative', marginBottom: '40px', backgroundColor: '#f8fafc', padding: '24px', borderRadius: '12px', border: '1px solid #f1f5f9' }}>
+                <svg viewBox="0 0 1000 250" width="100%" height="100%" style={{ overflow: 'visible' }}>
+                  <defs>
+                    <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#818cf8" stopOpacity="0.3" />
+                      <stop offset="100%" stopColor="#818cf8" stopOpacity="0.0" />
+                    </linearGradient>
+                    <linearGradient id="lineGradient" x1="0" y1="0" x2="1" y2="0">
+                      <stop offset="0%" stopColor="#818cf8" />
+                      <stop offset="50%" stopColor="#2EBCAB" />
+                      <stop offset="100%" stopColor="#CE90FF" />
+                    </linearGradient>
+                  </defs>
+
+                  {/* Horizontal grid lines & Y labels */}
+                  {[0, 25, 50, 75, 100].map((val) => {
+                    const y = 20 + ((100 - val) / 100 * 190);
+                    return (
+                      <g key={val}>
+                        <line 
+                          x1="60" 
+                          y1={y} 
+                          x2="960" 
+                          y2={y} 
+                          stroke="#e2e8f0" 
+                          strokeDasharray="4 4" 
+                          strokeWidth="1" 
+                        />
+                        <text 
+                          x="45" 
+                          y={y + 4} 
+                          fill="var(--text-muted)" 
+                          fontSize="11" 
+                          fontWeight="600" 
+                          textAnchor="end"
+                          style={{ fontFamily: 'var(--font-sans, sans-serif)' }}
+                        >
+                          {val}%
+                        </text>
+                      </g>
+                    );
+                  })}
+
+                  {/* Vertical grid lines & X labels */}
+                  {data.funnel.map((step, index) => {
+                    const x = 60 + (index * (900 / 15));
+                    
+                    let shortLabel = `Q${index - 1}`;
+                    if (index === 0) shortLabel = 'Landed';
+                    else if (index === 1) shortLabel = 'DOB';
+                    else if (index === 14) shortLabel = 'Lead';
+                    else if (index === 15) shortLabel = 'Done';
+
+                    return (
+                      <g key={index}>
+                        <line 
+                          x1={x} 
+                          y1="20" 
+                          x2={x} 
+                          y2="210" 
+                          stroke="#f1f5f9" 
+                          strokeWidth="1" 
+                        />
+                        <text 
+                          x={x} 
+                          y="230" 
+                          fill="var(--text-muted)" 
+                          fontSize="11" 
+                          fontWeight="700" 
+                          textAnchor="middle"
+                          style={{ fontFamily: 'var(--font-sans, sans-serif)' }}
+                        >
+                          {shortLabel}
+                        </text>
+                      </g>
+                    );
+                  })}
+
+                  {/* Area fill */}
+                  <path 
+                    d={`M 60 210 ${data.funnel.map((step, i) => {
+                      const x = 60 + (i * (900 / 15));
+                      const y = 20 + ((100 - step.percentage) / 100 * 190);
+                      return `L ${x} ${y}`;
+                    }).join(' ')} L 960 210 Z`} 
+                    fill="url(#areaGradient)" 
+                  />
+
+                  {/* Connection Line */}
+                  <path 
+                    d={data.funnel.map((step, i) => {
+                      const x = 60 + (i * (900 / 15));
+                      const y = 20 + ((100 - step.percentage) / 100 * 190);
+                      return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
+                    }).join(' ')} 
+                    fill="none" 
+                    stroke="url(#lineGradient)" 
+                    strokeWidth="3" 
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+
+                  {/* Interactive dots */}
+                  {data.funnel.map((step, index) => {
+                    const x = 60 + (index * (900 / 15));
+                    const y = 20 + ((100 - step.percentage) / 100 * 190);
+                    const isHovered = hoveredIndex === index;
+
+                    return (
+                      <g key={index}>
+                        <circle 
+                          cx={x} 
+                          cy={y} 
+                          r="15" 
+                          fill="transparent" 
+                          style={{ cursor: 'pointer' }}
+                          onMouseEnter={() => setHoveredIndex(index)}
+                          onMouseLeave={() => setHoveredIndex(null)}
+                        />
+                        <circle 
+                          cx={x} 
+                          cy={y} 
+                          r={isHovered ? 7 : 5} 
+                          fill="#ffffff" 
+                          stroke={index === 0 ? 'var(--primary)' : index === 15 ? '#2EBCAB' : '#818cf8'} 
+                          strokeWidth={isHovered ? 4 : 3}
+                          style={{ pointerEvents: 'none', transition: 'all 0.15s ease' }}
+                        />
+                      </g>
+                    );
+                  })}
+                </svg>
+
+                {/* HTML Tooltip overlay */}
+                {hoveredIndex !== null && (() => {
+                  const step = data.funnel![hoveredIndex];
+                  const x = 60 + (hoveredIndex * (900 / 15));
+                  const y = 20 + ((100 - step.percentage) / 100 * 190);
+                  
+                  return (
+                    <div 
+                      style={{
+                        position: 'absolute',
+                        left: `${(x / 1000) * 100}%`,
+                        top: `${(y / 250) * 100 - 15}%`,
+                        transform: 'translate(-50%, -100%)',
+                        backgroundColor: '#0f172a',
+                        color: '#ffffff',
+                        padding: '10px 14px',
+                        borderRadius: '8px',
+                        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.3)',
+                        pointerEvents: 'none',
+                        fontSize: '0.85rem',
+                        whiteSpace: 'nowrap',
+                        zIndex: 10,
+                        border: '1px solid #334155',
+                        fontFamily: "'Quicksand', sans-serif"
+                      }}
+                    >
+                      <div style={{ fontWeight: 700, marginBottom: '4px', color: '#38bdf8' }}>{step.name}</div>
+                      <div style={{ fontWeight: 500 }}>
+                        <span style={{ color: '#e2e8f0' }}>Reach:</span> <strong style={{ color: '#ffffff' }}>{step.count.toLocaleString()}</strong> ({step.percentage}%)
+                      </div>
+                      {hoveredIndex > 0 && (() => {
+                        const prevStep = data.funnel![hoveredIndex - 1];
+                        const dropCount = prevStep.count - step.count;
+                        const dropPct = prevStep.count > 0 ? ((dropCount / prevStep.count) * 100).toFixed(1) : '0.0';
+                        return (
+                          <div style={{ fontSize: '0.78rem', color: '#fca5a5', marginTop: '4px', fontWeight: 600 }}>
+                            ↓ {dropCount.toLocaleString()} dropped ({dropPct}%)
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  );
+                })()}
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                {data.funnel.map((step, index) => {
+                  const landedCount = data.funnel![0].count;
+                  const overallConversion = landedCount > 0 ? ((step.count / landedCount) * 100).toFixed(1) : '0.0';
+                  
+                  let dropOffCount = 0;
+                  let dropOffPercent = '0.0';
+                  if (index > 0) {
+                    const prevStep = data.funnel![index - 1];
+                    dropOffCount = prevStep.count - step.count;
+                    dropOffPercent = prevStep.count > 0 ? ((dropOffCount / prevStep.count) * 100).toFixed(1) : '0.0';
+                  }
+
+                  return (
+                    <div key={index}>
+                      {/* Drop-off Badge & Connector */}
+                      {index > 0 && (
+                        <div style={{ display: 'flex', alignItems: 'center', margin: '6px 0', paddingLeft: '24px' }}>
+                          <div style={{ width: '4px', height: '24px', backgroundColor: '#f1f5f9', borderRadius: '2px' }}></div>
+                          {dropOffCount > 0 ? (
+                            <div style={{ marginLeft: '16px', fontSize: '0.82rem', color: '#ef4444', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px', background: '#fee2e2', padding: '2px 10px', borderRadius: '99px' }}>
+                              <span>↓ {dropOffCount.toLocaleString()} abandoned ({dropOffPercent}% drop-off)</span>
+                            </div>
+                          ) : (
+                            <div style={{ marginLeft: '16px', fontSize: '0.82rem', color: '#10b981', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px', background: '#ecfdf5', padding: '2px 10px', borderRadius: '99px' }}>
+                              <span>→ 100% conversion (0 drop-off)</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Step Row */}
+                      <div 
+                        style={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          padding: '16px 20px', 
+                          borderRadius: '12px', 
+                          backgroundColor: '#f8fafc',
+                          border: '1px solid #f1f5f9',
+                          transition: 'all 0.2s ease',
+                          gap: '20px'
+                        }}
+                      >
+                        {/* Step Circle */}
+                        <div 
+                          style={{ 
+                            width: '32px', 
+                            height: '32px', 
+                            borderRadius: '50%', 
+                            backgroundColor: index === 0 ? 'var(--primary)' : index === data.funnel!.length - 1 ? '#2EBCAB' : '#e2e8f0', 
+                            color: index === 0 || index === data.funnel!.length - 1 ? '#000000' : 'var(--text-muted)',
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'center', 
+                            fontWeight: 700, 
+                            fontSize: '0.85rem',
+                            flexShrink: 0
+                          }}
+                        >
+                          {index + 1}
+                        </div>
+
+                        {/* Step Title */}
+                        <div style={{ width: '220px', fontWeight: 600, color: 'var(--text-main)', fontSize: '0.95rem', flexShrink: 0 }}>
+                          {step.name}
+                        </div>
+
+                        {/* Progress Bar Container */}
+                        <div style={{ flex: 1, height: '24px', backgroundColor: '#e2e8f0', borderRadius: '12px', overflow: 'hidden', position: 'relative' }}>
+                          <div 
+                            style={{ 
+                              width: `${overallConversion}%`, 
+                              height: '100%', 
+                              background: index === 0 
+                                ? 'linear-gradient(90deg, var(--primary) 0%, #2EBCAB 100%)'
+                                : index === data.funnel!.length - 1
+                                ? 'linear-gradient(90deg, #2EBCAB 0%, #CE90FF 100%)'
+                                : 'linear-gradient(90deg, #38bdf8 0%, #818cf8 100%)',
+                              borderRadius: '12px',
+                              transition: 'width 0.8s cubic-bezier(0.4, 0, 0.2, 1)'
+                            }}
+                          />
+                        </div>
+
+                        {/* Count & Percent */}
+                        <div style={{ width: '180px', textAlign: 'right', flexShrink: 0 }}>
+                          <span style={{ fontWeight: 700, fontSize: '1.05rem', color: 'var(--text-main)' }}>
+                            {step.count.toLocaleString()}
+                          </span>
+                          <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginLeft: '6px', fontWeight: 600 }}>
+                            ({overallConversion}%)
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Analytics Summary Context */}
           <div 

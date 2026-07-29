@@ -1,87 +1,85 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
 
-generator client {
-  provider = "prisma-client-js"
-}
-
 model QuestionSequence {
-  id        String   @id @default(cuid())
-  title     String   // e.g. "0-12 months"
-  minMonths Int
-  maxMonths Int
-  
+  id         String              @id @default(cuid())
+  title      String
+  minMonths  Int
+  maxMonths  Int
   placements SequencePlacement[]
 }
 
 model Question {
-  id                 String           @id @default(cuid())
-  text               String
-  videoUrl           String?
-  internalCode       String?          @unique
-  category           String?
-  
-  options            Option[]
-  placements         SequencePlacement[]
+  id           String              @id @default(cuid())
+  text         String
+  videoUrl     String?
+  internalCode String?             @unique
+  category     String?
+  options      Option[]
+  placements   SequencePlacement[]
 }
 
 model SequencePlacement {
-  id           String   @id @default(cuid())
-  order        Int      @default(0)
-  isScored     Boolean  @default(true)
+  id           String           @id @default(cuid())
+  order        Int              @default(0)
+  questionId   String
+  sequenceId   String
+  isScored     Boolean          @default(true)
   questionType String?
-  
-  questionId String
-  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
-  
-  sequenceId String
-  sequence   QuestionSequence @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
-  
+  question     Question         @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  sequence     QuestionSequence @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
+
   @@unique([sequenceId, questionId])
 }
 
 model Option {
   id         String   @id @default(cuid())
   text       String
-  weight     Int      @default(0) // 0, 5, or 10 (or 0 for tag questions)
-  tagValue   String?  // Optional tag string specifically bound to tag questions
+  weight     Int      @default(0)
+  tagValue   String?
   questionId String
   question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
 }
 
 model Submission {
-  id                 String   @id @default(cuid())
-  createdAt          DateTime @default(now())
-  parentName         String   @default("Unknown")
-  parentEmail        String   @default("Unknown")
-  childFirstName     String?
-  childDob           DateTime @default(now())
-  totalScore         Int      @default(0)
-  scoreStatus        String   @default("Unknown")
-  communicationStage String   @default("Unknown")
+  id                 String       @id @default(cuid())
+  totalScore         Int          @default(0)
+  createdAt          DateTime     @default(now())
+  childDob           DateTime     @default(now())
+  communicationStage String       @default("Unknown")
+  parentEmail        String       @default("Unknown")
+  parentName         String       @default("Unknown")
+  scoreStatus        String       @default("Unknown")
   speechClarity      String?
+  childFirstName     String?
   answers            Answer[]
   quizSession        QuizSession?
 }
 
 model Answer {
   id           String     @id @default(cuid())
+  submissionId String
   questionId   String     @default("Unknown")
   questionText String     @default("Unknown")
   value        String     @default("Unknown")
-  submissionId String
   submission   Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
 
   @@index([submissionId])
 }
 
 model QuizSession {
-  id           String      @id @default(cuid())
-  createdAt    DateTime    @default(now())
-  completedAt  DateTime?
-  submissionId String?     @unique
-  submission   Submission? @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  id             String      @id @default(cuid())
+  createdAt      DateTime    @default(now())
+  completedAt    DateTime?
+  submissionId   String?     @unique
+  submission     Submission? @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  currentStep    Int         @default(0)
+  sequenceLength Int?
 }

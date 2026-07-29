@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma';
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { childDoB } = body;
+    const { childDoB, sessionId } = body;
 
     if (!childDoB) {
       return NextResponse.json({ error: 'Missing Date of Birth' }, { status: 400 });
@@ -67,10 +67,33 @@ export async function POST(req: Request) {
       }
     });
 
-    // Create a new QuizSession
-    const session = await prisma.quizSession.create({
-      data: {}
-    });
+    // Calculate total question sequence length
+    const totalQuestions = (sequence?.placements?.length || 0) + (icsSequence?.placements?.length || 0);
+
+    // Create or update QuizSession
+    let session;
+    if (sessionId) {
+      try {
+        session = await prisma.quizSession.update({
+          where: { id: sessionId },
+          data: {
+            currentStep: 1,
+            sequenceLength: totalQuestions
+          }
+        });
+      } catch (err) {
+        console.error("Failed to update existing QuizSession, creating new one:", err);
+      }
+    }
+
+    if (!session) {
+      session = await prisma.quizSession.create({
+        data: {
+          currentStep: 1,
+          sequenceLength: totalQuestions
+        }
+      });
+    }
 
     return NextResponse.json({
       sessionId: session.id,
