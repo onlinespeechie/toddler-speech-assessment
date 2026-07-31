@@ -4,6 +4,12 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight, CheckCircle2, User } from 'lucide-react';
 
+declare global {
+  interface Window {
+    fbq?: (...args: any[]) => void;
+  }
+}
+
 interface ResultsPageProps {
   submissionResult: {
     scoreStatus: string;
@@ -14,6 +20,12 @@ interface ResultsPageProps {
 }
 
 export default function ResultsPage({ submissionResult, onRestart }: ResultsPageProps) {
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.fbq) {
+      window.fbq('track', 'Lead');
+    }
+  }, []);
+
   const status = submissionResult?.scoreStatus || 'Delayed';
   
   const contentMap = {

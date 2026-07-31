@@ -280,11 +280,6 @@ export default function AssessmentApp() {
       setSubmissionId(data.submission.id);
       setStep('result');
       sessionStorage.removeItem('quiz_session_id');
-
-      // Fire standard Meta Pixel 'Lead' event exactly once on quiz completion
-      if (typeof window !== 'undefined' && window.fbq) {
-        window.fbq('track', 'Lead');
-      }
     } catch (err: any) {
       setError(err.message);
     } finally {
