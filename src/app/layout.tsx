@@ -17,7 +17,7 @@ export default function RootLayout({
       <head>
         <Script
           id="meta-pixel"
-          strategy="afterInteractive"
+          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `
               !function(f,b,e,v,n,t,s)
