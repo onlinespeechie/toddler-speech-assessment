@@ -3,6 +3,12 @@
 import { useState, useEffect } from 'react';
 import ResultsPage from '../components/ResultsPage';
 
+declare global {
+  interface Window {
+    fbq?: (...args: any[]) => void;
+  }
+}
+
 type Option = {
   id: string;
   text: string;
@@ -275,9 +281,9 @@ export default function AssessmentApp() {
       setStep('result');
       sessionStorage.removeItem('quiz_session_id');
 
-      // Fire standard Meta Pixel event without any custom payload/metadata
-      if (typeof window !== 'undefined' && (window as any).fbq) {
-        (window as any).fbq('track', 'Lead');
+      // Fire standard Meta Pixel 'Lead' event exactly once on quiz completion
+      if (typeof window !== 'undefined' && window.fbq) {
+        window.fbq('track', 'Lead');
       }
     } catch (err: any) {
       setError(err.message);
