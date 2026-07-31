@@ -333,7 +333,12 @@ export default function AssessmentApp() {
 
             {error && <div style={{ color: '#ef4444', marginBottom: '16px', fontWeight: 600 }}>{error}</div>}
 
-            <div onKeyDown={e => { if (e.key === 'Enter') handleStartAge(e as any); }}>
+            <div 
+              onKeyDown={e => { if (e.key === 'Enter') handleStartAge(e as any); }}
+              suppressHydrationWarning
+              data-dashlane-ignore="true"
+              data-lpignore="true"
+            >
               <div className="input-group">
                 <label className="input-label">Child's Date of Birth</label>
                 <input 
@@ -343,11 +348,21 @@ export default function AssessmentApp() {
                   onChange={e => setChildDoB(e.target.value)}
                   disabled={loading}
                   max={new Date().toISOString().split('T')[0]}
+                  autoComplete="off"
+                  data-dashlane-ignore="true"
+                  data-lpignore="true"
                   suppressHydrationWarning
                 />
               </div>
 
-              <button type="button" onClick={handleStartAge} className="btn btn-start" style={{ width: '100%', marginTop: '16px' }} disabled={loading}>
+              <button 
+                type="button" 
+                onClick={handleStartAge} 
+                className="btn btn-start" 
+                style={{ width: '100%', marginTop: '16px' }} 
+                disabled={loading}
+                suppressHydrationWarning
+              >
                 {loading ? 'Loading Questions...' : 'Start Quiz'}
               </button>
             </div>
