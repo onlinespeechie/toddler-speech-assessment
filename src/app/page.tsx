@@ -333,7 +333,7 @@ export default function AssessmentApp() {
 
             {error && <div style={{ color: '#ef4444', marginBottom: '16px', fontWeight: 600 }}>{error}</div>}
 
-            <form onSubmit={handleStartAge}>
+            <div onKeyDown={e => { if (e.key === 'Enter') handleStartAge(e as any); }}>
               <div className="input-group">
                 <label className="input-label">Child's Date of Birth</label>
                 <input 
@@ -347,10 +347,10 @@ export default function AssessmentApp() {
                 />
               </div>
 
-              <button type="submit" className="btn btn-start" style={{ width: '100%', marginTop: '16px' }} disabled={loading}>
+              <button type="button" onClick={handleStartAge} className="btn btn-start" style={{ width: '100%', marginTop: '16px' }} disabled={loading}>
                 {loading ? 'Loading Questions...' : 'Start Quiz'}
               </button>
-            </form>
+            </div>
           </div>
         )}
 
