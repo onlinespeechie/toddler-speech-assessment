@@ -25,6 +25,8 @@ export default function RootLayout({
               t.src=v;s=b.getElementsByTagName(e)[0];
               s.parentNode.insertBefore(t,s)}(window, document,'script',
               'https://connect.facebook.net/en_US/fbevents.js');
+              window._fbq = window._fbq || {};
+              window._fbq.disablePushState = true;
               fbq('set', 'autoConfig', false, '320483099619378');
               fbq('init', '320483099619378', {}, { autoConfig: false });
               fbq('track', 'PageView');
