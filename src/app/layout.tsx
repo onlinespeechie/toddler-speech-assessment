@@ -28,7 +28,7 @@ export default function RootLayout({
               window._fbq = window._fbq || {};
               window._fbq.disablePushState = true;
               fbq('set', 'autoConfig', false, '320483099619378');
-              fbq('init', '320483099619378', {}, { autoConfig: false });
+              fbq('init', '320483099619378');
               fbq('track', 'PageView');
             `,
           }}

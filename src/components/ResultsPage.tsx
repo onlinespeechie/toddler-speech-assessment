@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight, CheckCircle2, User } from 'lucide-react';
 
@@ -17,14 +17,21 @@ interface ResultsPageProps {
     id: string;
   };
   onRestart: () => void;
+  isQuizCompleted?: boolean;
 }
 
-export default function ResultsPage({ submissionResult, onRestart }: ResultsPageProps) {
+export default function ResultsPage({ submissionResult, onRestart, isQuizCompleted = true }: ResultsPageProps) {
+  const hasTrackedLead = useRef(false);
+
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.fbq) {
-      window.fbq('track', 'Lead');
+    // Fire when the results page is active and submission data is present
+    if (submissionResult && isQuizCompleted && !hasTrackedLead.current) {
+      if (typeof window !== 'undefined' && window.fbq) {
+        window.fbq('track', 'Lead');
+        hasTrackedLead.current = true;
+      }
     }
-  }, []);
+  }, [submissionResult, isQuizCompleted]);
 
   const status = submissionResult?.scoreStatus || 'Delayed';
   

@@ -559,6 +559,7 @@ export default function AssessmentApp() {
           <ResultsPage 
             submissionResult={submissionResult} 
             onRestart={() => window.location.reload()} 
+            isQuizCompleted={step === 'result' && !!submissionResult}
           />
         )
       )}
