@@ -294,7 +294,7 @@ export default function AssessmentApp() {
           <img src="https://onlinespeechie.com/wp-content/uploads/2024/03/os-logo-new.png" alt="Online Speechie" />
         </a>
         
-        <button className="mobile-menu-toggle" onClick={() => setIsMenuOpen(!isMenuOpen)}>
+        <button className="mobile-menu-toggle" onClick={() => setIsMenuOpen(!isMenuOpen)} data-fb-event-ignore="true">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <line x1="3" y1="12" x2="21" y2="12"></line>
             <line x1="3" y1="6" x2="21" y2="6"></line>
@@ -338,6 +338,7 @@ export default function AssessmentApp() {
               suppressHydrationWarning
               data-dashlane-ignore="true"
               data-lpignore="true"
+              data-fb-event-ignore="true"
             >
               <div className="input-group">
                 <label className="input-label">Child's Date of Birth</label>
@@ -362,6 +363,7 @@ export default function AssessmentApp() {
                 style={{ width: '100%', marginTop: '16px' }} 
                 disabled={loading}
                 suppressHydrationWarning
+                data-fb-event-ignore="true"
               >
                 {loading ? 'Loading Questions...' : 'Start Quiz'}
               </button>
@@ -394,6 +396,7 @@ export default function AssessmentApp() {
               }}
               className="btn btn-secondary"
               style={{ padding: '8px 16px', fontSize: '0.9rem' }}
+              data-fb-event-ignore="true"
             >
               Edit
             </button>
@@ -414,6 +417,7 @@ export default function AssessmentApp() {
               <button 
                 onClick={handleBack}
                 style={{ background: 'none', border: 'none', color: 'var(--primary)', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '8px', padding: 0 }}
+                data-fb-event-ignore="true"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
                 Previous Question
@@ -438,6 +442,7 @@ export default function AssessmentApp() {
                       className="option-btn"
                       onClick={() => handleAnswer(option, allPlacements[currentQuestionIndex])}
                       disabled={loading}
+                      data-fb-event-ignore="true"
                     >
                       {option.text}
                     </button>
@@ -489,7 +494,7 @@ export default function AssessmentApp() {
 
             {error && <div style={{ color: '#ef4444', marginBottom: '16px', fontWeight: 600 }}>{error}</div>}
 
-            <form onSubmit={handleFinalSubmit}>
+            <form onSubmit={handleFinalSubmit} data-fb-event-ignore="true">
               <div className="input-group">
                 <label className="input-label">Parent / Guardian Name</label>
                 <input 
@@ -546,6 +551,7 @@ export default function AssessmentApp() {
                 className="btn btn-start" 
                 style={{ width: '100%', marginTop: '16px' }} 
                 disabled={loading || !agreeConsent}
+                data-fb-event-ignore="true"
               >
                 {loading ? 'Submitting...' : 'Receive Results'}
               </button>
