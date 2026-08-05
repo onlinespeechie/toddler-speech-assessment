@@ -15,23 +15,37 @@ interface ResultsPageProps {
     scoreStatus: string;
     communicationStage: string;
     id: string;
+    email?: string;
   };
   onRestart: () => void;
   isQuizCompleted?: boolean;
+  step?: string;
 }
 
-export default function ResultsPage({ submissionResult, onRestart, isQuizCompleted = true }: ResultsPageProps) {
-  const hasTrackedLead = useRef(false);
-
+export default function ResultsPage({ 
+  submissionResult, 
+  onRestart, 
+  isQuizCompleted = true,
+  step = 'result'
+}: ResultsPageProps) {
   useEffect(() => {
-    // Fire when the results page is active and submission data is present
-    if (submissionResult && isQuizCompleted && !hasTrackedLead.current) {
-      if (typeof window !== 'undefined' && window.fbq) {
-        window.fbq('track', 'Lead');
-        hasTrackedLead.current = true;
+    // STRICT GUARD: Must be on the final results step with valid submission data
+    if ((step === 'result' || isQuizCompleted) && submissionResult && typeof window !== 'undefined') {
+      // Unique key per submission (uses submission ID or email)
+      const leadId = submissionResult.id || submissionResult.email || 'completed';
+      const storageKey = `meta_lead_fired_${leadId}`;
+
+      // Only fire if this specific thank-you completion has NOT been tracked yet
+      if (!sessionStorage.getItem(storageKey) && window.fbq) {
+        // Lock immediately BEFORE tracking to prevent race conditions
+        sessionStorage.setItem(storageKey, 'true');
+
+        // Execute explicit Meta Lead event
+        window.fbq('track', 'Lead', {}, { eventID: String(leadId) });
+        console.log('✅ Meta Lead tracked successfully on Thank You page:', leadId);
       }
     }
-  }, [submissionResult, isQuizCompleted]);
+  }, [step, isQuizCompleted, submissionResult]);
 
   const status = submissionResult?.scoreStatus || 'Delayed';
   
