@@ -16,6 +16,7 @@ interface ResultsPageProps {
     communicationStage: string;
     id: string;
     email?: string;
+    phone?: string;
   };
   onRestart: () => void;
   isQuizCompleted?: boolean;
@@ -40,9 +41,28 @@ export default function ResultsPage({
         // Lock immediately BEFORE tracking to prevent race conditions
         sessionStorage.setItem(storageKey, 'true');
 
-        // Execute explicit Meta Lead event
+        // Execute explicit Meta Lead event (Client Pixel)
         window.fbq('track', 'Lead', {}, { eventID: String(leadId) });
         console.log('✅ Meta Lead tracked successfully on Thank You page:', leadId);
+
+        // Execute server-side Meta Conversions API (CAPI) event call
+        fetch('/api/meta-lead', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            leadId: String(leadId),
+            email: submissionResult.email,
+            phone: submissionResult.phone,
+            userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : undefined,
+          }),
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            console.log('✅ Meta CAPI Lead event sent:', data);
+          })
+          .catch((err) => {
+            console.error('❌ Failed to send Meta CAPI Lead event:', err);
+          });
       }
     }
   }, [step, isQuizCompleted, submissionResult]);
