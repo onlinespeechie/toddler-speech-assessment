@@ -21,13 +21,15 @@ interface ResultsPageProps {
   onRestart: () => void;
   isQuizCompleted?: boolean;
   step?: string;
+  testEventCode?: string;
 }
 
 export default function ResultsPage({ 
   submissionResult, 
   onRestart, 
   isQuizCompleted = true,
-  step = 'result'
+  step = 'result',
+  testEventCode
 }: ResultsPageProps) {
   useEffect(() => {
     // STRICT GUARD: Must be on the final results step with valid submission data
@@ -54,6 +56,7 @@ export default function ResultsPage({
             email: submissionResult.email,
             phone: submissionResult.phone,
             userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : undefined,
+            testEventCode: testEventCode || undefined,
           }),
         })
           .then((res) => res.json())
@@ -65,7 +68,7 @@ export default function ResultsPage({
           });
       }
     }
-  }, [step, isQuizCompleted, submissionResult]);
+  }, [step, isQuizCompleted, submissionResult, testEventCode]);
 
   const status = submissionResult?.scoreStatus || 'Delayed';
   

@@ -8,15 +8,16 @@ function hashData(value?: string) {
 
 export async function POST(request: Request) {
   try {
-    const { leadId, email, phone, clientIp, userAgent } = await request.json();
+    const { leadId, email, phone, clientIp, userAgent, testEventCode } = await request.json();
     const PIXEL_ID = '320483099619378';
     const ACCESS_TOKEN = process.env.META_CAPI_ACCESS_TOKEN;
+    const activeTestCode = testEventCode || process.env.META_TEST_EVENT_CODE;
 
     if (!ACCESS_TOKEN) {
       return NextResponse.json({ error: 'Missing CAPI Token' }, { status: 500 });
     }
 
-    const payload = {
+    const payload: Record<string, any> = {
       data: [
         {
           event_name: 'Lead',
@@ -32,6 +33,10 @@ export async function POST(request: Request) {
         },
       ],
     };
+
+    if (activeTestCode) {
+      payload.test_event_code = activeTestCode;
+    }
 
     const res = await fetch(
       `https://graph.facebook.com/v19.0/${PIXEL_ID}/events?access_token=${ACCESS_TOKEN}`,
