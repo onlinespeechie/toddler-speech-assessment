@@ -8,13 +8,21 @@ function hashData(value?: string) {
 
 export async function POST(request: Request) {
   try {
-    const { leadId, email, phone, clientIp, userAgent, testEventCode } = await request.json();
+    const body = await request.json().catch(() => ({}));
+    const { leadId, email, phone, clientIp: bodyClientIp, userAgent: bodyUserAgent, testEventCode } = body;
     const PIXEL_ID = '320483099619378';
     const ACCESS_TOKEN = process.env.META_CAPI_ACCESS_TOKEN;
     const activeTestCode = testEventCode || process.env.META_TEST_EVENT_CODE;
 
+    const clientIp = bodyClientIp || request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || undefined;
+    const userAgent = bodyUserAgent || request.headers.get('user-agent') || undefined;
+
     if (!ACCESS_TOKEN) {
-      return NextResponse.json({ error: 'Missing CAPI Token' }, { status: 500 });
+      console.warn('⚠️ [Meta CAPI Warning] META_CAPI_ACCESS_TOKEN is missing in environment variables');
+      return NextResponse.json({ 
+        error: 'Missing META_CAPI_ACCESS_TOKEN in environment variables', 
+        eventId: leadId 
+      }, { status: 400 });
     }
 
     const payload: Record<string, any> = {
@@ -22,13 +30,13 @@ export async function POST(request: Request) {
         {
           event_name: 'Lead',
           event_time: Math.floor(Date.now() / 1000),
-          event_id: String(leadId), // Same ID used on client for deduplication
+          event_id: String(leadId || 'completed'), // Same ID used on client for deduplication
           action_source: 'website',
           user_data: {
             em: email ? [hashData(email)] : undefined,
             ph: phone ? [hashData(phone)] : undefined,
-            client_ip_address: clientIp || undefined,
-            client_user_agent: userAgent || undefined,
+            client_ip_address: clientIp,
+            client_user_agent: userAgent,
           },
         },
       ],
@@ -48,8 +56,23 @@ export async function POST(request: Request) {
     );
 
     const data = await res.json();
-    return NextResponse.json({ success: true, metaResponse: data });
-  } catch (error) {
-    return NextResponse.json({ error: 'Failed to send CAPI event' }, { status: 500 });
+
+    if (!res.ok) {
+      console.error('❌ [Meta CAPI Error Response]:', data);
+      return NextResponse.json({ 
+        error: 'Meta Graph API returned an error', 
+        eventId: leadId, 
+        metaResponse: data 
+      }, { status: res.status });
+    }
+
+    console.log(`✅ [Meta CAPI Success] Event sent for leadId: ${leadId}`, data);
+    return NextResponse.json({ success: true, eventId: leadId, metaResponse: data });
+  } catch (error: any) {
+    console.error('❌ [Meta CAPI Server Exception]:', error);
+    return NextResponse.json({ 
+      error: 'Failed to send CAPI event', 
+      message: error?.message || String(error) 
+    }, { status: 500 });
   }
 }

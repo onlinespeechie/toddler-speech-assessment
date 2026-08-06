@@ -32,29 +32,37 @@ export default function ResultsPage({
   testEventCode
 }: ResultsPageProps) {
   useEffect(() => {
+    console.log('🔍 [Meta Debug] ResultsPage mounted, step:', step);
+
     // STRICT GUARD: Must be on the final results step with valid submission data
     if ((step === 'result' || isQuizCompleted) && submissionResult && typeof window !== 'undefined') {
-      // Unique key per submission (uses submission ID or email)
-      const leadId = submissionResult.id || submissionResult.email || 'completed';
+      // Unique key per submission (uses submission ID, email, or timestamp fallback)
+      const leadId = submissionResult?.id || submissionResult?.email || `lead_${Date.now()}`;
       const storageKey = `meta_lead_fired_${leadId}`;
 
       // Only fire if this specific thank-you completion has NOT been tracked yet
-      if (!sessionStorage.getItem(storageKey) && window.fbq) {
+      if (!sessionStorage.getItem(storageKey)) {
         // Lock immediately BEFORE tracking to prevent race conditions
         sessionStorage.setItem(storageKey, 'true');
 
-        // Execute explicit Meta Lead event (Client Pixel)
-        window.fbq('track', 'Lead', {}, { eventID: String(leadId) });
-        console.log('✅ Meta Lead tracked successfully on Thank You page:', leadId);
+        // 1. Client-side Meta Pixel call (if available)
+        if (window.fbq) {
+          console.log('🔍 [Meta Debug] Firing client fbq Lead for ID:', leadId);
+          window.fbq('track', 'Lead', {}, { eventID: String(leadId) });
+          console.log('✅ Meta Lead tracked successfully on Thank You page:', leadId);
+        } else {
+          console.warn('⚠️ [Meta Debug] window.fbq not available yet on client');
+        }
 
-        // Execute server-side Meta Conversions API (CAPI) event call
+        // 2. Server-side Meta Conversions API (CAPI) event call (fires independently)
+        console.log('🔍 [Meta Debug] Calling /api/meta-lead...');
         fetch('/api/meta-lead', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             leadId: String(leadId),
-            email: submissionResult.email,
-            phone: submissionResult.phone,
+            email: submissionResult?.email,
+            phone: submissionResult?.phone,
             userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : undefined,
             testEventCode: testEventCode || undefined,
           }),
