@@ -231,14 +231,55 @@ export async function POST(req: Request) {
     }
 
     // --- ConvertKit CRM Sync ---
+    // Reliability note: each call below gets its own retry-with-backoff, and the three
+    // independent tag calls run in parallel instead of sequentially, so a single slow/flaky
+    // ConvertKit request can no longer block or silently swallow the others. Each failure is
+    // logged individually (with the submission id + email) rather than one generic error, so a
+    // partial sync failure is actually diagnosable in Vercel logs afterward.
     try {
       const CONVERTKIT_API_KEY = process.env.CONVERTKIT_API_KEY;
       const CONVERTKIT_FORM_ID = process.env.CONVERTKIT_FORM_ID;
-      
+
       if (CONVERTKIT_API_KEY && CONVERTKIT_FORM_ID) {
+        type CkResult = { ok: boolean; label: string; error?: unknown };
+
+        async function ckFetchWithRetry(
+          label: string,
+          url: string,
+          payload: Record<string, unknown>,
+          retries = 2
+        ): Promise<CkResult> {
+          let lastError: unknown = null;
+          for (let attempt = 0; attempt <= retries; attempt++) {
+            try {
+              const res = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json; charset=utf-8' },
+                body: JSON.stringify(payload)
+              });
+              if (res.ok) return { ok: true, label };
+              lastError = await res.text();
+              console.error(
+                `ConvertKit ${label} failed for ${parentEmail} (submission ${submission.id}), attempt ${attempt + 1}/${retries + 1}, status ${res.status}:`,
+                lastError
+              );
+            } catch (err) {
+              lastError = err;
+              console.error(
+                `ConvertKit ${label} threw for ${parentEmail} (submission ${submission.id}), attempt ${attempt + 1}/${retries + 1}:`,
+                err
+              );
+            }
+            if (attempt < retries) {
+              const delayMs = 300 * Math.pow(3, attempt); // 300ms, then 900ms
+              await new Promise((resolve) => setTimeout(resolve, delayMs));
+            }
+          }
+          return { ok: false, label, error: lastError };
+        }
+
         const ckEndpoint = `https://api.convertkit.com/v3/forms/${CONVERTKIT_FORM_ID}/subscribe`;
-        
-        const payload = {
+        const subscribePayload = {
           api_key: CONVERTKIT_API_KEY,
           email: parentEmail,
           first_name: parentName,
@@ -252,86 +293,58 @@ export async function POST(req: Request) {
           }
         };
 
-        const ckResponse = await fetch(ckEndpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json; charset=utf-8' },
-          body: JSON.stringify(payload)
-        });
+        const subscribeResult = await ckFetchWithRetry('form subscribe', ckEndpoint, subscribePayload);
 
-        if (!ckResponse.ok) {
-          const errorData = await ckResponse.text();
-          console.error('ConvertKit API error:', errorData);
-        }
-
-        // --- Tagging Logic ---
-        let tagId = null;
+        // --- Tagging Logic (score, comm stage, speech clarity) - independent, run in parallel ---
+        let tagId: number | null = null;
         if (output1 === 'Delayed') tagId = 3672935;
         else if (output1 === 'At Risk') tagId = 3672943;
         else if (output1 === 'On Track') tagId = 3672966;
 
-        if (tagId) {
-          const tagEndpoint = `https://api.convertkit.com/v3/tags/${tagId}/subscribe`;
-          const tagPayload = {
-            api_key: CONVERTKIT_API_KEY,
-            email: parentEmail
-          };
-
-          const tagResponse = await fetch(tagEndpoint, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json; charset=utf-8' },
-            body: JSON.stringify(tagPayload)
-          });
-
-          if (!tagResponse.ok) {
-            const tagErrorData = await tagResponse.text();
-            console.error('ConvertKit Tagging API error:', tagErrorData);
-          }
-        }
-
-        // --- Communication Stage Tagging Logic ---
-        let stageTagId = null;
+        let stageTagId: number | null = null;
         if (commStage === 'ENGAGER' || commStage === 'ENGAGER (EARLY COMMUNICATION CONCERN)') stageTagId = 3672938;
         else if (commStage === 'SINGLE WORD USER') stageTagId = 3673005;
         else if (commStage === 'PHRASE USER') stageTagId = 3719653;
         else if (commStage === 'CONVERSATIONALIST') stageTagId = 3719655;
 
-        if (stageTagId) {
-          const stageTagEndpoint = `https://api.convertkit.com/v3/tags/${stageTagId}/subscribe`;
-          const tagPayload = {
-            api_key: CONVERTKIT_API_KEY,
-            email: parentEmail
-          };
-          
-          const stageTagResponse = await fetch(stageTagEndpoint, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json; charset=utf-8' },
-            body: JSON.stringify(tagPayload)
-          });
+        const tagCalls: Promise<CkResult>[] = [];
 
-          if (!stageTagResponse.ok) {
-            const stageTagErrorData = await stageTagResponse.text();
-            console.error('ConvertKit Stage Tagging API error:', stageTagErrorData);
-          }
+        if (tagId) {
+          tagCalls.push(ckFetchWithRetry(
+            `score tag (${output1})`,
+            `https://api.convertkit.com/v3/tags/${tagId}/subscribe`,
+            { api_key: CONVERTKIT_API_KEY, email: parentEmail }
+          ));
+        }
+        if (stageTagId) {
+          tagCalls.push(ckFetchWithRetry(
+            `comm stage tag (${commStage})`,
+            `https://api.convertkit.com/v3/tags/${stageTagId}/subscribe`,
+            { api_key: CONVERTKIT_API_KEY, email: parentEmail }
+          ));
+        }
+        if (speechClarityConcern) {
+          tagCalls.push(ckFetchWithRetry(
+            'speech clarity tag',
+            `https://api.convertkit.com/v3/tags/20536350/subscribe`,
+            { api_key: CONVERTKIT_API_KEY, email: parentEmail }
+          ));
         }
 
-        // --- Speech Clarity Concern Tagging Logic ---
-        if (speechClarityConcern) {
-          const clarityTagEndpoint = `https://api.convertkit.com/v3/tags/20536350/subscribe`;
-          const tagPayload = {
-            api_key: CONVERTKIT_API_KEY,
-            email: parentEmail
-          };
+        const tagResults = await Promise.allSettled(tagCalls);
 
-          const clarityTagResponse = await fetch(clarityTagEndpoint, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json; charset=utf-8' },
-            body: JSON.stringify(tagPayload)
-          });
+        const failedLabels = [
+          ...(subscribeResult.ok ? [] : [subscribeResult.label]),
+          ...tagResults
+            .map((r) => (r.status === 'fulfilled' ? r.value : { ok: false, label: 'tag call (rejected)' } as CkResult))
+            .filter((r) => !r.ok)
+            .map((r) => r.label)
+        ];
 
-          if (!clarityTagResponse.ok) {
-            const clarityTagErrorData = await clarityTagResponse.text();
-            console.error('ConvertKit Speech Clarity Tagging API error:', clarityTagErrorData);
-          }
+        if (failedLabels.length > 0) {
+          console.error(
+            `ConvertKit sync partially failed for ${parentEmail} (submission ${submission.id}) after retries: ${failedLabels.join(', ')}`
+          );
         }
       } else {
         console.warn('ConvertKit API Key or Form ID is missing. Please add CONVERTKIT_FORM_ID to .env. Skipping ConvertKit sync.');
@@ -339,7 +352,6 @@ export async function POST(req: Request) {
     } catch (crmError) {
       console.error('ConvertKit Sync failed:', crmError);
     }
-
     return NextResponse.json({
       success: true,
       submission: submission,
