@@ -15,6 +15,24 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        {/* GA4 - Results Page Behaviour Tracking */}
+        <Script
+          id="ga4-base"
+          strategy="afterInteractive"
+          src="https://www.googletagmanager.com/gtag/js?id=G-3KMZY8345V"
+        />
+        <Script
+          id="ga4-init"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', 'G-3KMZY8345V');
+            `,
+          }}
+        />
         <Script
           id="meta-pixel"
           strategy="afterInteractive"

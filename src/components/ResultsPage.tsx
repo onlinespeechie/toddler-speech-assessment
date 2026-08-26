@@ -31,6 +31,9 @@ export default function ResultsPage({
   step = 'result',
   testEventCode
 }: ResultsPageProps) {
+  // Refs to the Vimeo iframes, used for GA4 play/complete tracking
+  const desktopVideoRef = useRef<HTMLIFrameElement>(null);
+  const mobileVideoRef = useRef<HTMLIFrameElement>(null);
   useEffect(() => {
     console.log('🔍 [Meta Debug] ResultsPage mounted, step:', step);
 
@@ -77,6 +80,107 @@ export default function ResultsPage({
       }
     }
   }, [step, isQuizCompleted, submissionResult, testEventCode]);
+  // GA4 virtual page view -- fires once when the results step is reached
+  useEffect(() => {
+    if ((step === 'result' || isQuizCompleted) && submissionResult && typeof window !== 'undefined') {
+      const leadId = submissionResult?.id || submissionResult?.email || `lead_${Date.now()}`;
+      const pvKey = `ga4_pageview_fired_${leadId}`;
+
+      if (!sessionStorage.getItem(pvKey)) {
+        sessionStorage.setItem(pvKey, 'true');
+        const statusSlug = (submissionResult?.scoreStatus || 'unknown').toLowerCase().replace(/\s+/g, '-');
+        (window as any).gtag?.('event', 'page_view', {
+          page_location: `${window.location.origin}/quiz-results/${statusSlug}`,
+          page_path: `/quiz-results/${statusSlug}`,
+          page_title: 'Quiz Results',
+          result_status: submissionResult?.scoreStatus,
+        });
+      }
+    }
+  }, [step, isQuizCompleted, submissionResult]);
+
+  // GA4 scroll depth tracking -- fires once the visitor scrolls 90% down the results page
+  useEffect(() => {
+    if (!((step === 'result' || isQuizCompleted) && submissionResult && typeof window !== 'undefined')) return;
+
+    const leadId = submissionResult?.id || submissionResult?.email || `lead_${Date.now()}`;
+    const scrollKey = `ga4_scroll90_fired_${leadId}`;
+    if (sessionStorage.getItem(scrollKey)) return;
+
+    const handleScroll = () => {
+      const scrollTop = window.scrollY || document.documentElement.scrollTop;
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      if (docHeight <= 0) return;
+      const scrolledPct = (scrollTop / docHeight) * 100;
+      if (scrolledPct >= 90) {
+        sessionStorage.setItem(scrollKey, 'true');
+        (window as any).gtag?.('event', 'scroll_90', {
+          page_location_custom: 'quiz_results',
+          result_status: submissionResult?.scoreStatus,
+        });
+        window.removeEventListener('scroll', handleScroll);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [step, isQuizCompleted, submissionResult]);
+
+  // GA4 video play/complete tracking for the Vimeo results-explainer embeds
+  useEffect(() => {
+    if (!((step === 'result' || isQuizCompleted) && submissionResult && typeof window !== 'undefined')) return;
+
+    const leadId = submissionResult?.id || submissionResult?.email || `lead_${Date.now()}`;
+
+    const fireVideoEvent = (eventName: 'video_play' | 'video_complete', variant: string) => {
+      const key = `ga4_${eventName}_${variant}_${leadId}`;
+      if (sessionStorage.getItem(key)) return;
+      sessionStorage.setItem(key, 'true');
+      (window as any).gtag?.('event', eventName, {
+        page_location_custom: 'quiz_results',
+        video_variant: variant,
+        result_status: submissionResult?.scoreStatus,
+      });
+    };
+
+    const listenTo = (iframe: HTMLIFrameElement | null, variant: string) => {
+      if (!iframe || iframe.dataset.vimeoBound === 'true') return;
+      iframe.dataset.vimeoBound = 'true';
+      const startListening = () => {
+        const win = iframe.contentWindow;
+        if (!win) return;
+        win.postMessage(JSON.stringify({ method: 'addEventListener', value: 'play' }), '*');
+        win.postMessage(JSON.stringify({ method: 'addEventListener', value: 'finish' }), '*');
+      };
+      iframe.addEventListener('load', startListening);
+      startListening();
+    };
+
+    listenTo(desktopVideoRef.current, 'desktop');
+    listenTo(mobileVideoRef.current, 'mobile');
+
+    const handleMessage = (event: MessageEvent) => {
+      if (event.origin !== 'https://player.vimeo.com') return;
+      let data: any;
+      try {
+        data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+      } catch {
+        return;
+      }
+      if (!data || !data.event) return;
+
+      const variant = event.source === desktopVideoRef.current?.contentWindow ? 'desktop' : 'mobile';
+
+      if (data.event === 'play') {
+        fireVideoEvent('video_play', variant);
+      } else if (data.event === 'finish') {
+        fireVideoEvent('video_complete', variant);
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [step, isQuizCompleted, submissionResult]);
 
   const status = submissionResult?.scoreStatus || 'Delayed';
   
@@ -117,6 +221,25 @@ export default function ResultsPage({
   ];
 
   const ctaLink = "https://onlinespeechie.com/osbundle?OS_BUNDLE_PRODUCT_IDS=9249&OS_BUNDLE_QTYS=1&OS_BUNDLE_COUPON=quizrst100&OS_BUNDLE_DEFAULT_REDIRECT=checkout";
+
+  // GA4 CTA click tracking -- delays the cross-origin navigation briefly so the click has time to send
+  const handleCtaClick = (position: 'pitch' | 'final') => (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    const navigate = () => { window.location.href = ctaLink; };
+    if (typeof window !== 'undefined' && (window as any).gtag) {
+      (window as any).gtag('event', 'cta_click', {
+        page_location_custom: 'quiz_results',
+        cta_name: 'start_ready_set_talk',
+        cta_position: position,
+        result_status: submissionResult?.scoreStatus,
+        event_callback: navigate,
+        event_timeout: 1500,
+      });
+      setTimeout(navigate, 1500);
+    } else {
+      navigate();
+    }
+  };
 
   return (
     <div style={{ width: '100%', backgroundColor: '#ffffff', color: '#383838', fontFamily: 'inherit' }}>
@@ -345,6 +468,7 @@ export default function ResultsPage({
         <div className="video-card">
           <div className="video-wrapper-desktop">
             <iframe 
+              ref={desktopVideoRef}
               src={currentContent.vimeoLink} 
               style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
               allow="autoplay; fullscreen; picture-in-picture" 
@@ -353,6 +477,7 @@ export default function ResultsPage({
           </div>
           <div className="video-wrapper-mobile">
             <iframe 
+              ref={mobileVideoRef}
               src={currentContent.portraitVimeoLink} 
               style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
               allow="autoplay; fullscreen; picture-in-picture" 
@@ -435,6 +560,7 @@ export default function ResultsPage({
               </div>
               <a 
                 href={ctaLink}
+                onClick={handleCtaClick('pitch')}
                 style={{ backgroundColor: '#ffffff', borderRadius: '25px', padding: '12px 36px', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', cursor: 'pointer' }}
               >
                 <span style={{ fontWeight: 'bold', fontSize: '20px', color: '#2EBCAB', whiteSpace: 'nowrap' }}>
@@ -521,6 +647,7 @@ export default function ResultsPage({
           </h2>
           <a 
             href={ctaLink}
+            onClick={handleCtaClick('final')}
             style={{ backgroundColor: '#ffffff', color: '#D387FF', padding: '11px 16px', borderRadius: '9999px', fontWeight: 'bold', fontSize: '15px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)', textDecoration: 'none', position: 'relative', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', whiteSpace: 'nowrap' }}
           >
             Start Ready, Set...Talk!™
