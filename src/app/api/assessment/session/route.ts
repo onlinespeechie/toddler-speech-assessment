@@ -1,9 +1,13 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { rateLimit, getClientIp } from '@/lib/rateLimit';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
+  if (!rateLimit(`session:${getClientIp(req)}`, 20, 10 * 60_000)) {
+    return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+  }
   try {
     const session = await prisma.quizSession.create({
       data: {
@@ -22,6 +26,9 @@ export async function POST(req: Request) {
 }
 
 export async function PATCH(req: Request) {
+  if (!rateLimit(`session-patch:${getClientIp(req)}`, 60, 10 * 60_000)) {
+    return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+  }
   try {
     const body = await req.json();
     const { sessionId, currentStep } = body;

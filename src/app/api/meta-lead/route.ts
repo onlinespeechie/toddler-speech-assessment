@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
+import { rateLimit, getClientIp } from '@/lib/rateLimit';
 
 function hashData(value?: string) {
   if (!value) return undefined;
@@ -7,6 +8,9 @@ function hashData(value?: string) {
 }
 
 export async function POST(request: Request) {
+  if (!rateLimit(`meta-lead:${getClientIp(request)}`, 10, 10 * 60_000)) {
+    return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+  }
   try {
     const body = await request.json().catch(() => ({}));
     const { 

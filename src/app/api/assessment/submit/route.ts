@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { rateLimit, getClientIp } from '@/lib/rateLimit';
 
 export async function POST(req: Request) {
+  if (!rateLimit(`submit:${getClientIp(req)}`, 10, 10 * 60_000)) {
+    return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+  }
   try {
     const body = await req.json();
     const { parentName, parentEmail, childFirstName, childDoB, totalScore, finalTag, answers, sessionId } = body;
