@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { renderToStream } from '@react-pdf/renderer';
 import { ReportDocument } from '@/lib/pdfReport';
+import { verifyPdfToken } from '@/lib/pdfToken';
 import React from 'react';
 
 export async function GET(
@@ -13,6 +14,11 @@ export async function GET(
 
     if (!submissionId) {
       return NextResponse.json({ error: 'Missing submission ID' }, { status: 400 });
+    }
+
+    const { searchParams } = new URL(req.url);
+    if (!verifyPdfToken(submissionId, searchParams.get('exp'), searchParams.get('sig'))) {
+      return NextResponse.json({ error: 'Invalid or expired link' }, { status: 403 });
     }
 
     const submissionData = await prisma.submission.findUnique({

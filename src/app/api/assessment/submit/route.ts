@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { rateLimit, getClientIp } from '@/lib/rateLimit';
+import { signPdfUrl } from '@/lib/pdfToken';
 
 export async function POST(req: Request) {
   if (!rateLimit(`submit:${getClientIp(req)}`, 10, 10 * 60_000)) {
@@ -14,10 +15,18 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(parentEmail)) {
+      return NextResponse.json({ error: 'Invalid email address' }, { status: 400 });
+    }
+
     // Precise age calculation in months and days
     const now = new Date();
     const dob = new Date(childDoB);
-    
+
+    if (isNaN(dob.getTime())) {
+      return NextResponse.json({ error: 'Invalid date of birth' }, { status: 400 });
+    }
+
     let ageMonths = (now.getFullYear() - dob.getFullYear()) * 12 + now.getMonth() - dob.getMonth();
     let ageDays = now.getDate() - dob.getDate();
     
@@ -356,9 +365,13 @@ export async function POST(req: Request) {
     } catch (crmError) {
       console.error('ConvertKit Sync failed:', crmError);
     }
+    const pdfLink = signPdfUrl(submission.id);
+    const pdfUrl = pdfLink ? `/api/pdf/${submission.id}?exp=${pdfLink.exp}&sig=${pdfLink.sig}` : null;
+
     return NextResponse.json({
       success: true,
       submission: submission,
+      pdfUrl,
     });
 
   } catch (error) {

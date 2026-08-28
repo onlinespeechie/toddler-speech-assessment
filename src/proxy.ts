@@ -14,7 +14,11 @@ function cleanEnvValue(value: string | undefined): string | undefined {
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Bypass auth middleware checks in local development
+  // Bypass auth middleware checks in local development.
+  // SAFETY: this disables ALL admin auth (login, 2FA) with zero other guard. It's safe only
+  // because Vercel always sets NODE_ENV=production for both preview and production deploys.
+  // If this app is ever self-hosted or run behind a custom `next start` wrapper, verify
+  // NODE_ENV is explicitly set to "production" there — do not rely on the platform default.
   if (process.env.NODE_ENV === 'development') {
     return NextResponse.next();
   }
