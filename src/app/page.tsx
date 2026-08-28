@@ -41,6 +41,14 @@ type AssessmentData = {
   icsSequence: SequenceData;
 };
 
+// Fires an fbq event at most once per browser tab session (mirrors the Lead event guard in ResultsPage.tsx)
+function fireFbqOnce(key: string, ...args: Parameters<NonNullable<Window['fbq']>>) {
+  if (typeof window === 'undefined' || !window.fbq) return;
+  if (sessionStorage.getItem(key)) return;
+  sessionStorage.setItem(key, 'true');
+  window.fbq(...args);
+}
+
 export default function AssessmentApp() {
   const getSafeEmbedUrl = (url: string) => {
     if (!url) return '';
@@ -123,6 +131,14 @@ export default function AssessmentApp() {
     }
   }, []);
 
+  useEffect(() => {
+    // Mid-funnel Meta Event Tracking on Step 1 (DOB step)
+    if (step === 'age') {
+      fireFbqOnce('meta_quizstart_fired', 'trackCustom', 'QuizStart', { quiz_name: 'speech_assessment' });
+      fireFbqOnce('meta_viewcontent_dob_fired', 'track', 'ViewContent', { content_name: 'Quiz - Step DOB', content_category: 'assessment' });
+    }
+  }, [step]);
+
   // 1. Submit DoB only to get Sequence
   const handleStartAge = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -132,6 +148,9 @@ export default function AssessmentApp() {
     }
     setLoading(true);
     setError('');
+
+    // Trigger ViewContent event on DOB step submission (no-op if already fired on mount)
+    fireFbqOnce('meta_viewcontent_dob_fired', 'track', 'ViewContent', { content_name: 'Quiz - Step DOB', content_category: 'assessment' });
 
     try {
       const res = await fetch('/api/assessment', {
@@ -171,6 +190,9 @@ export default function AssessmentApp() {
       setIcsSequence(data.icsSequence);
       setSessionId(data.sessionId || null);
       setStep('quiz');
+
+      // No-op if already fired on mount
+      fireFbqOnce('meta_quizstart_fired', 'trackCustom', 'QuizStart', { quiz_name: 'speech_assessment' });
     } catch (err: any) {
       setError(err.message);
     } finally {

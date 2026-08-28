@@ -9,13 +9,25 @@ function hashData(value?: string) {
 export async function POST(request: Request) {
   try {
     const body = await request.json().catch(() => ({}));
-    const { leadId, email, phone, clientIp: bodyClientIp, userAgent: bodyUserAgent, testEventCode } = body;
+    const { 
+      leadId, 
+      email, 
+      phone, 
+      clientIp: bodyClientIp, 
+      userAgent: bodyUserAgent, 
+      testEventCode,
+      eventName,
+      customData,
+      custom_data
+    } = body;
     const PIXEL_ID = '320483099619378';
     const ACCESS_TOKEN = process.env.META_CAPI_ACCESS_TOKEN;
     const activeTestCode = testEventCode || process.env.META_TEST_EVENT_CODE;
 
     const clientIp = bodyClientIp || request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || undefined;
     const userAgent = bodyUserAgent || request.headers.get('user-agent') || undefined;
+    const targetEventName = eventName || body.event_name || 'Lead';
+    const targetCustomData = customData || custom_data || undefined;
 
     if (!ACCESS_TOKEN) {
       console.warn('⚠️ [Meta CAPI Warning] META_CAPI_ACCESS_TOKEN is missing in environment variables');
@@ -25,21 +37,25 @@ export async function POST(request: Request) {
       }, { status: 400 });
     }
 
+    const eventItem: Record<string, any> = {
+      event_name: targetEventName,
+      event_time: Math.floor(Date.now() / 1000),
+      event_id: String(leadId || 'completed'), // Same ID used on client for deduplication
+      action_source: 'website',
+      user_data: {
+        em: email ? [hashData(email)] : undefined,
+        ph: phone ? [hashData(phone)] : undefined,
+        client_ip_address: clientIp,
+        client_user_agent: userAgent,
+      },
+    };
+
+    if (targetCustomData) {
+      eventItem.custom_data = targetCustomData;
+    }
+
     const payload: Record<string, any> = {
-      data: [
-        {
-          event_name: 'Lead',
-          event_time: Math.floor(Date.now() / 1000),
-          event_id: String(leadId || 'completed'), // Same ID used on client for deduplication
-          action_source: 'website',
-          user_data: {
-            em: email ? [hashData(email)] : undefined,
-            ph: phone ? [hashData(phone)] : undefined,
-            client_ip_address: clientIp,
-            client_user_agent: userAgent,
-          },
-        },
-      ],
+      data: [eventItem],
     };
 
     if (activeTestCode) {
