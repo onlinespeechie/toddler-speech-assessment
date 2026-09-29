@@ -1,8 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronRight, CheckCircle2, User } from 'lucide-react';
+import React, { useEffect, useRef } from 'react';
 
 declare global {
   interface Window {
@@ -17,6 +15,7 @@ interface ResultsPageProps {
     id: string;
     email?: string;
     phone?: string;
+    childFirstName?: string | null;
   };
   onRestart: () => void;
   isQuizCompleted?: boolean;
@@ -24,16 +23,120 @@ interface ResultsPageProps {
   testEventCode?: string;
 }
 
-export default function ResultsPage({ 
-  submissionResult, 
-  onRestart, 
+const GUIDE_URL = 'https://onlinespeechie.com/blog/talking-more-in-10-minutes-a-day-heres-what-every-late-talker-parent-should-do/';
+const MASTERCLASS_URL = 'https://onlinespeechie.com/late-talker-masterclass/';
+const ACTIVITY_LIBRARY_URL = 'https://onlinespeechie.com/activity';
+const TERMS_URL = 'https://onlinespeechie.com/terms-conditons-policies/';
+
+type Cta = {
+  id: string;
+  dataCtaId: string;
+  dataCtaName: string;
+  ctaType: 'guide' | 'masterclass' | 'library';
+  time: string;
+  title: string;
+  body: string;
+  ctaText: string;
+  href: string;
+  tone: 'teal' | 'purple';
+  solo?: boolean;
+  chips?: string[];
+  freeNote?: string;
+};
+
+type StatusKey = 'Delayed' | 'At Risk' | 'On Track';
+
+const STATUS_ORDER: StatusKey[] = ['Delayed', 'At Risk', 'On Track'];
+
+const PILL_TONES: Record<StatusKey, { onBg: string; onFg: string; offBg: string; offFg: string; label: string }> = {
+  'Delayed': { onBg: 'var(--qr-purple)', onFg: '#fff', offBg: 'var(--qr-purple-l)', offFg: 'var(--qr-purple-deep)', label: 'DELAYED' },
+  'At Risk': { onBg: 'var(--qr-yellow)', onFg: 'var(--qr-yellow-ink)', offBg: 'var(--qr-yellow-l)', offFg: 'var(--qr-yellow-ink)', label: 'AT RISK' },
+  'On Track': { onBg: 'var(--qr-teal)', onFg: '#fff', offBg: 'var(--qr-teal-l)', offFg: 'var(--qr-teal-deep)', label: 'ON TRACK' },
+};
+
+const GUIDE_MASTERCLASS_LEAD = "I've been helping families of toddlers learning to talk for around 15 years, and I've put together the two resources below for families just like yours. Both are free, and both will give you something you can use today. Which one you pick just depends on how much time you've got right now, and how deep you want to go.";
+
+function guideMasterclassCtas(status: 'delayed' | 'atrisk'): Cta[] {
+  return [
+    {
+      id: `cta-guide-${status}`,
+      dataCtaId: `${status}_guide`,
+      dataCtaName: `Free Guide — ${status === 'delayed' ? 'Delayed' : 'At Risk'}`,
+      ctaType: 'guide',
+      time: 'GOT 5 MINUTES?',
+      title: 'Free guide',
+      body: 'The three things that make the biggest difference to a toddler learning to talk at home, including some activities you can try this week. A few minutes to read.',
+      ctaText: 'Read the guide',
+      href: GUIDE_URL,
+      tone: 'teal',
+    },
+    {
+      id: `cta-masterclass-${status}`,
+      dataCtaId: `${status}_masterclass`,
+      dataCtaName: `Free Masterclass — ${status === 'delayed' ? 'Delayed' : 'At Risk'}`,
+      ctaType: 'masterclass',
+      time: 'GOT 45 MINUTES?',
+      title: 'Free masterclass',
+      body: 'The exact method I teach parents to get their toddler talking more at home. What activities to focus on, what words to use, and demonstrations with real children in everyday moments.',
+      ctaText: 'Watch the masterclass',
+      href: MASTERCLASS_URL,
+      tone: 'purple',
+    },
+  ];
+}
+
+const STATUS_CONTENT: Record<StatusKey, { videoId: string; lead: string[]; ctas: Cta[] }> = {
+  'Delayed': {
+    videoId: '1224169398',
+    lead: [
+      "Remember, around one in five children are late to talk. It isn't uncommon. But what you do from here does matter.",
+      GUIDE_MASTERCLASS_LEAD,
+    ],
+    ctas: guideMasterclassCtas('delayed'),
+  },
+  'At Risk': {
+    videoId: '1224169399',
+    lead: [
+      "Around one in five children are late to talk. It's not uncommon. And you've caught it at the best possible point, because you're getting ahead of it rather than catching up.",
+      GUIDE_MASTERCLASS_LEAD,
+    ],
+    ctas: guideMasterclassCtas('atrisk'),
+  },
+  'On Track': {
+    videoId: '1224169400',
+    lead: [
+      "Here's the part most parents don't get told: early language keeps compounding. The words a toddler has at two feed their vocabulary at four, their reading at six, and it carries on from there.",
+      '', // filled dynamically with the child's name below
+    ],
+    ctas: [
+      {
+        id: 'cta-library-ontrack',
+        dataCtaId: 'ontrack_library',
+        dataCtaName: 'Activity Library — On Track',
+        ctaType: 'library',
+        time: 'FREE TO BROWSE',
+        title: 'The activity library',
+        body: "Bite-sized activities for any toy and any routine, filtered by what you've got in the house and how much time you have. Every one is built around the words you want your toddler using.",
+        ctaText: 'Explore the activity library',
+        href: ACTIVITY_LIBRARY_URL,
+        tone: 'teal',
+        solo: true,
+        chips: ['bath time', 'bubbles', 'first words', '10 minutes', 'duplo', 'getting dressed'],
+        freeNote: 'Plenty are free to watch right now.',
+      },
+    ],
+  },
+};
+
+export default function ResultsPage({
+  submissionResult,
+  onRestart,
   isQuizCompleted = true,
   step = 'result',
   testEventCode
 }: ResultsPageProps) {
-  // Refs to the Vimeo iframes, used for GA4 play/complete tracking
-  const desktopVideoRef = useRef<HTMLIFrameElement>(null);
-  const mobileVideoRef = useRef<HTMLIFrameElement>(null);
+  const videoRef = useRef<HTMLIFrameElement>(null);
+
   useEffect(() => {
     console.log('🔍 [Meta Debug] ResultsPage mounted, step:', step);
 
@@ -80,6 +183,7 @@ export default function ResultsPage({
       }
     }
   }, [step, isQuizCompleted, submissionResult, testEventCode]);
+
   // GA4 virtual page view -- fires once when the results step is reached
   useEffect(() => {
     if ((step === 'result' || isQuizCompleted) && submissionResult && typeof window !== 'undefined') {
@@ -126,25 +230,24 @@ export default function ResultsPage({
     return () => window.removeEventListener('scroll', handleScroll);
   }, [step, isQuizCompleted, submissionResult]);
 
-  // GA4 video play/complete tracking for the Vimeo results-explainer embeds
+  // GA4 video play/complete tracking for the Vimeo results-explainer embed
   useEffect(() => {
     if (!((step === 'result' || isQuizCompleted) && submissionResult && typeof window !== 'undefined')) return;
 
     const leadId = submissionResult?.id || submissionResult?.email || `lead_${Date.now()}`;
 
-    const fireVideoEvent = (eventName: 'video_play' | 'video_complete', variant: string) => {
-      const key = `ga4_${eventName}_${variant}_${leadId}`;
+    const fireVideoEvent = (eventName: 'video_play' | 'video_complete') => {
+      const key = `ga4_${eventName}_${leadId}`;
       if (sessionStorage.getItem(key)) return;
       sessionStorage.setItem(key, 'true');
       (window as any).gtag?.('event', eventName, {
         page_location_custom: 'quiz_results',
-        video_variant: variant,
         result_status: submissionResult?.scoreStatus,
       });
     };
 
-    const listenTo = (iframe: HTMLIFrameElement | null, variant: string) => {
-      if (!iframe || iframe.dataset.vimeoBound === 'true') return;
+    const iframe = videoRef.current;
+    if (iframe && iframe.dataset.vimeoBound !== 'true') {
       iframe.dataset.vimeoBound = 'true';
       const startListening = () => {
         const win = iframe.contentWindow;
@@ -154,13 +257,11 @@ export default function ResultsPage({
       };
       iframe.addEventListener('load', startListening);
       startListening();
-    };
-
-    listenTo(desktopVideoRef.current, 'desktop');
-    listenTo(mobileVideoRef.current, 'mobile');
+    }
 
     const handleMessage = (event: MessageEvent) => {
       if (event.origin !== 'https://player.vimeo.com') return;
+      if (event.source !== videoRef.current?.contentWindow) return;
       let data: any;
       try {
         data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
@@ -169,12 +270,10 @@ export default function ResultsPage({
       }
       if (!data || !data.event) return;
 
-      const variant = event.source === desktopVideoRef.current?.contentWindow ? 'desktop' : 'mobile';
-
       if (data.event === 'play') {
-        fireVideoEvent('video_play', variant);
+        fireVideoEvent('video_play');
       } else if (data.event === 'finish') {
-        fireVideoEvent('video_complete', variant);
+        fireVideoEvent('video_complete');
       }
     };
 
@@ -182,478 +281,251 @@ export default function ResultsPage({
     return () => window.removeEventListener('message', handleMessage);
   }, [step, isQuizCompleted, submissionResult]);
 
-  const status = submissionResult?.scoreStatus || 'Delayed';
-  
-  const contentMap = {
-    'Delayed': {
-      subheading: "Based on your answers, your child requires extra support with their communication development.",
-      iconColor: "#EB0E0E",
-      iconZone: "16.6%",
-      textBox: "You caught this early - and early action makes the biggest difference. With the right strategies at home, progress can happen faster than you think.",
-      vimeoLink: "https://player.vimeo.com/video/1192800109?h=3ebdd1bfb1&fl=ip&fe=ec",
-      portraitVimeoLink: "https://player.vimeo.com/video/1195269986?h=f276444b85"
-    },
-    'At Risk': {
-      subheading: "Based on your answers, your child is showing signs that they will benefit from extra support with their communication development.",
-      iconColor: "#FFD723",
-      iconZone: "50%",
-      textBox: "You're ahead of the curve. Most parents don't look into this until things are more concerning - you're already in the best position to make a difference.",
-      vimeoLink: "https://player.vimeo.com/video/1192800080?h=620fd124e5&fl=ip&fe=ec",
-      portraitVimeoLink: "https://player.vimeo.com/video/1195271605?h=b3e59ec1ac"
-    },
-    'On Track': {
-      subheading: "Based on your answers, your child is showing signs that they are on track for their age.",
-      iconColor: "#15C151",
-      iconZone: "83.3%",
-      textBox: "Your child is right where they need to be - and with the right input at home, you can help them stay that way and keep building.",
-      vimeoLink: "https://player.vimeo.com/video/1192800045?h=307d30c466&fl=ip&fe=ec",
-      portraitVimeoLink: "https://player.vimeo.com/video/1195270029?h=6055781d5f"
-    }
-  };
+  const status: StatusKey = STATUS_ORDER.includes(submissionResult?.scoreStatus as StatusKey)
+    ? (submissionResult.scoreStatus as StatusKey)
+    : 'Delayed';
 
-  const currentContent = contentMap[status as keyof typeof contentMap] || contentMap['Delayed'];
+  const childName = submissionResult?.childFirstName?.trim() || '';
+  const namePossessive = childName ? `${childName}'s` : "Your child's";
+  const nameOrFallback = childName || 'Your child';
 
-  const testimonials = [
-    { id: 1, text: "It's definitely made me a more confident mum now.", author: "Claudia A.", img: "/Claudia A.jpg" },
-    { id: 2, text: "He went from not making eye contact or speaking at all to being described as very chatty by his teacher.", author: "Jessica V.", img: "/Jessica V.jpg" },
-    { id: 3, text: "Ready Set Talk gave me the confidence and the hope that I can do this, it's been really life-changing for both me and Roper.", author: "Melissa M.", img: "/Melissa M.jpg" },
-    { id: 4, text: "He's now saying his first words and even linking them together - it's incredible to see his progress!", author: "Rebekah H.", img: "/Rebekah H.jpg" }
-  ];
+  const content = STATUS_CONTENT[status];
+  const lead = status === 'On Track'
+    ? [content.lead[0], `So keep doing the good work you're obviously already doing, and keep focusing on ${namePossessive} talking. If you want some ideas for that, head over to my activity library.`]
+    : content.lead;
 
-  const ctaLink = "https://onlinespeechie.com/osbundle?OS_BUNDLE_PRODUCT_IDS=9249&OS_BUNDLE_QTYS=1&OS_BUNDLE_COUPON=quizrst100&OS_BUNDLE_DEFAULT_REDIRECT=checkout";
-
-  // GA4 CTA click tracking -- delays the cross-origin navigation briefly so the click has time to send
-  const handleCtaClick = (position: 'pitch' | 'final') => (e: React.MouseEvent<HTMLAnchorElement>) => {
-    e.preventDefault();
-    const navigate = () => { window.location.href = ctaLink; };
+  // Fires cta_click with both a fully-qualified id (e.g. "atrisk_masterclass") and the
+  // underlying cta_type/result_status split out separately, so GA4 reporting can break down
+  // by result status, by CTA type, or by the exact combination without extra setup.
+  const handleCtaClick = (cta: Cta) => () => {
     if (typeof window !== 'undefined' && (window as any).gtag) {
       (window as any).gtag('event', 'cta_click', {
         page_location_custom: 'quiz_results',
-        cta_name: 'start_ready_set_talk',
-        cta_position: position,
+        cta_name: cta.dataCtaId,
+        cta_id: cta.dataCtaId,
+        cta_type: cta.ctaType,
+        cta_label: cta.dataCtaName,
         result_status: submissionResult?.scoreStatus,
-        event_callback: navigate,
-        event_timeout: 1500,
+        link_url: cta.href,
       });
-      setTimeout(navigate, 1500);
-    } else {
-      navigate();
     }
   };
 
   return (
-    <div style={{ width: '100%', backgroundColor: '#ffffff', color: '#383838', fontFamily: 'inherit' }}>
+    <div className="qr-page">
       <style>{`
-        .video-card {
-          width: 100%;
-          background-color: #F9F9E5;
-          border: 3px solid #D387FF;
-          border-radius: 12px;
-          box-shadow: -8px 8px 0px 0px rgba(211,135,255,1);
-          display: flex;
-          flex-wrap: wrap;
-          overflow: hidden;
-          margin-bottom: 80px;
-          box-sizing: border-box;
+        @font-face{font-family:"Gilmer";font-style:normal;font-weight:400;font-display:swap;
+          src:url(/fonts/gilmer-400.woff2) format("woff2")}
+        @font-face{font-family:"Gilmer";font-style:normal;font-weight:700;font-display:swap;
+          src:url(/fonts/gilmer-700.woff2) format("woff2")}
+        @font-face{font-family:"Gilmer";font-style:normal;font-weight:800;font-display:swap;
+          src:url(/fonts/gilmer-800.woff2) format("woff2")}
+        .qr-page{
+          --qr-ink:#241f2e; --qr-muted:#6b7078; --qr-line:#e9e6df;
+          --qr-yellow:#fbee4b; --qr-yellow-ink:#5c5300; --qr-yellow-l:#fdf6c4;
+          --qr-teal:#2fbcab; --qr-teal-deep:#12594f; --qr-teal-l:#dbf3ef;
+          --qr-purple:#c98bfb; --qr-purple-deep:#7b3fa8; --qr-purple-l:#f4e7fd;
+          --qr-hero:#fdfbe0;
+          margin:0;background:#fff;color:var(--qr-ink);
+          font-family:"Gilmer",-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+          line-height:1.55;-webkit-font-smoothing:antialiased;
         }
-        .video-wrapper-desktop {
-          display: none;
-        }
-        .video-wrapper-mobile {
-          display: block;
-          background-color: #000000;
-          position: relative;
-          width: 100%;
-          aspect-ratio: 9/16;
-        }
-        .video-text {
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
-          gap: 16px;
-          padding: 32px 15px;
-          box-sizing: border-box;
-          flex: 1 1 350px;
-        }
-        .pitch-top {
-          display: flex;
-          flex-direction: column;
-          gap: 36px;
-          padding: 30px 15px;
-          box-sizing: border-box;
-          width: 100%;
-        }
-        .pitch-columns {
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
-          width: 100%;
-        }
-        .pitch-col {
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
-        }
-        .pitch-bottom {
-          width: 100%;
-          background-color: #2EBCAB;
-          padding: 30px 15px;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 30px;
-          box-sizing: border-box;
-        }
-        .testimonials-container {
-          display: flex;
-          flex-direction: column;
-          gap: 32px;
-          width: 100%;
-          box-sizing: border-box;
-        }
-        .testimonial-item {
-          display: flex;
-          gap: 16px;
-          align-items: flex-start;
-          box-sizing: border-box;
-          width: 100%;
-        }
-        .bio-container {
-          width: 100%;
-          max-width: 1080px;
-          display: flex;
-          flex-wrap: wrap;
-          align-items: center;
-          gap: 40px;
-          margin-bottom: 80px;
-          box-sizing: border-box;
-        }
-        .bio-image-wrapper {
-          position: relative;
-          width: 100%;
-          max-width: 460px;
-          aspect-ratio: 460/340;
-          background-color: #D4D6B6;
-          border-radius: 16px;
-          box-sizing: border-box;
-        }
-        .bio-image-inner {
-          position: absolute;
-          top: -10px;
-          left: 10px;
-          width: 100%;
-          height: 100%;
-          background-color: #ffffff;
-          border-radius: 16px;
-          box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-          overflow: hidden;
-        }
-        .bio-text {
-          display: flex;
-          flex-direction: column;
-          gap: 20px;
-          flex: 1 1 300px;
-          color: #383838;
-        }
-        @media (min-width: 900px) {
-          .video-card {
-            flex-wrap: nowrap;
-            height: 350px;
-            align-items: stretch;
-          }
-          .video-wrapper-desktop {
-            display: block;
-            background-color: #000000;
-            position: relative;
-            width: 622px;
-            height: 350px;
-            flex-shrink: 0;
-          }
-          .video-wrapper-mobile {
-            display: none;
-          }
-          .video-text {
-            height: 350px;
-            padding: 32px 40px;
-          }
-          .pitch-top {
-            padding: 30px 40px;
-          }
-          .pitch-columns {
-            flex-direction: row;
-            gap: 32px;
-          }
-          .pitch-bottom {
-            flex-direction: row;
-            justify-content: space-between;
-            gap: 80px;
-            padding: 30px 40px;
-          }
-          .testimonials-container {
-            flex-direction: row;
-            flex-wrap: nowrap;
-            justify-content: space-between;
-          }
-          .testimonial-item {
-            flex: 1 1 23%;
-            max-width: 25%;
-          }
-          .bio-container {
-            flex-wrap: nowrap;
-            gap: 64px;
-          }
-          .bio-image-wrapper {
-            flex: 0 0 460px;
-            height: 340px;
-            aspect-ratio: auto;
-          }
+        .qr-page *{box-sizing:border-box}
+        .qr-wrap{max-width:880px;margin:0 auto;padding:0 24px 90px}
+
+        .qr-hero{background:var(--qr-hero);border-radius:0 0 40px 40px;padding:44px 24px 46px;margin:0 0 26px;
+              position:relative;overflow:hidden}
+        .qr-petal{position:absolute;top:-60px;right:-60px;width:220px;height:220px;opacity:.9}
+        .qr-petal-bl{position:absolute;bottom:-60px;left:-60px;width:220px;height:220px;opacity:.9}
+        .qr-brand{display:flex;align-items:center;justify-content:center;margin:0 0 34px;position:relative;z-index:1}
+
+        .qr-hero h1{font-size:42px;line-height:1.14;letter-spacing:-1px;text-align:center;margin:0 0 28px;font-weight:800;
+              position:relative;z-index:1;max-width:680px;margin-left:auto;margin-right:auto}
+        .qr-hero h1 em{font-style:normal;color:#927a00}
+
+        .qr-band{margin:0 auto;max-width:560px;position:relative;z-index:1;background:#fff;border-radius:24px;
+              padding:22px 24px 20px;box-shadow:0 10px 30px rgba(46,20,70,.10)}
+        .qr-track{position:relative;height:14px;margin-bottom:16px;border-radius:999px;overflow:visible;
+              background:linear-gradient(90deg,var(--qr-purple) 0 33%,var(--qr-yellow) 33% 66%,var(--qr-teal) 66% 100%)}
+        .qr-marker-wrap{position:absolute;top:-30px;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:4px}
+        .qr-marker-tag{font-size:10.5px;font-weight:700;color:#fff;background:var(--qr-ink);padding:3px 8px;border-radius:999px;white-space:nowrap}
+        .qr-marker{width:22px;height:22px;border-radius:50%;background:#fff;border:4px solid var(--qr-ink);box-shadow:0 2px 6px rgba(0,0,0,.18)}
+        .qr-pills{display:flex;gap:8px}
+        .qr-pill{flex:1;text-align:center;padding:10px 6px;border-radius:999px;font-weight:700;
+              font-size:12.5px;letter-spacing:.3px}
+
+        .qr-inbox{display:flex;align-items:center;justify-content:center;gap:8px;
+               color:var(--qr-muted);font-size:14px;margin:0 0 22px}
+
+        .qr-wrap h2{font-size:27px;line-height:1.25;letter-spacing:-.5px;margin:0 0 20px;font-weight:800}
+
+        .qr-video{border-radius:18px;overflow:hidden;margin-bottom:26px;box-shadow:0 16px 36px rgba(36,31,46,.16)}
+        .qr-video .qr-frame{background:linear-gradient(135deg,#2a2733,#1c1a22);position:relative;aspect-ratio:3/2}
+
+        .qr-lead{font-size:17px;line-height:1.62;margin:0 0 18px;max-width:720px;color:#3a3542}
+        .qr-lead:last-of-type{margin-bottom:32px}
+
+        .qr-steps-panel{background:#f9f9e5;border-radius:28px;padding:40px 32px 44px;margin:0 0 58px}
+        .qr-steps-panel h2{margin:0 0 20px}
+        .qr-next-steps{margin:0 0 58px}
+        .qr-next-steps h2{margin:0 0 20px}
+
+        .qr-opts{display:flex;gap:24px}
+        .qr-opt{flex:1;border-radius:20px;overflow:hidden;display:flex;flex-direction:column;border:2px solid transparent}
+        .qr-opt.qr-solo{flex:0 1 560px;max-width:560px}
+        .qr-opt.qr-teal{border-color:var(--qr-teal);box-shadow:-6px 6px 0 0 var(--qr-teal)}
+        .qr-opt.qr-purple{border-color:var(--qr-purple);box-shadow:-6px 6px 0 0 var(--qr-purple)}
+        .qr-opt .qr-head{padding:20px 22px;color:#fff}
+        .qr-opt.qr-teal .qr-head{background:var(--qr-teal)}
+        .qr-opt.qr-purple .qr-head{background:var(--qr-purple);color:#fff}
+        .qr-opt .qr-time{display:inline-block;font-size:11.5px;font-weight:800;letter-spacing:.4px;
+              background:#fff;padding:5px 12px;border-radius:999px;margin-bottom:10px}
+        .qr-opt.qr-teal .qr-time{color:var(--qr-teal-deep)}
+        .qr-opt.qr-purple .qr-time{color:var(--qr-purple-deep)}
+        .qr-opt .qr-head h3{margin:0;font-size:22px;line-height:1.2;letter-spacing:-.3px;font-weight:800;color:#fff}
+        .qr-opt .qr-body{background:#fff;padding:22px;display:flex;flex-direction:column;flex:1}
+        .qr-opt p{margin:0 0 22px;font-size:15.5px;line-height:1.55;color:#4a4f57;flex:1}
+        .qr-opt p.qr-free{margin:0 0 20px;font-size:14px;color:var(--qr-muted);flex:none}
+        .qr-chips{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 20px}
+        .qr-chip{font-size:13px;padding:6px 12px;border-radius:999px;background:#eaf7f4;color:#3a7d72}
+        .qr-cta{display:block;text-align:center;text-decoration:none;font-weight:800;font-size:16px;
+             padding:15px 18px;border-radius:999px;color:#fff;border:2px solid transparent;
+             box-shadow:0px 0px 0px 0px rgba(0,0,0,.17);
+             transition:background-color .3s,color .3s,border-color .3s,box-shadow .32s ease-out,transform .15s ease}
+        .qr-opt.qr-teal .qr-cta{background:var(--qr-teal);border-color:var(--qr-teal)}
+        .qr-opt.qr-purple .qr-cta{background:var(--qr-purple);color:#fff;border-color:var(--qr-purple)}
+        .qr-opt.qr-teal .qr-cta:hover,.qr-opt.qr-teal .qr-cta:focus-visible{background:#fff;color:var(--qr-teal-deep);box-shadow:0px 6px 0px 0px rgba(0,0,0,.17)}
+        .qr-opt.qr-purple .qr-cta:hover,.qr-opt.qr-purple .qr-cta:focus-visible{background:#fff;color:var(--qr-purple-deep);box-shadow:0px 6px 0px 0px rgba(0,0,0,.17)}
+        .qr-cta:active{transform:translateY(6px);box-shadow:0px 0px 0px 0px rgba(0,0,0,.17);
+             transition:box-shadow .14s ease-in,transform .12s ease-in}
+
+        .qr-footer{margin-top:44px;padding-top:26px;border-top:1px solid var(--qr-line);color:#8d939b;font-size:12.5px;line-height:1.6}
+        .qr-footer b{color:#6b7078;display:block;margin-bottom:5px;font-size:12.5px}
+        .qr-footer p{margin:0 0 16px;max-width:760px}
+        .qr-footer a{color:#6b7078}
+
+        @media (max-width:720px){
+          .qr-wrap{padding-left:12px;padding-right:12px}
+          .qr-hero{border-radius:0 0 28px 28px;padding:32px 18px 38px}
+          .qr-hero h1{font-size:29px}
+          .qr-wrap h2{font-size:22px}
+          .qr-petal{width:140px;height:140px;top:-30px;right:-30px}
+          .qr-petal-bl{width:140px;height:140px;bottom:-30px;left:-30px}
+          .qr-steps-panel{padding:28px 20px 32px;border-radius:20px}
+          .qr-opts{flex-direction:column}
+          .qr-opt.qr-solo{max-width:100%}
         }
       `}</style>
-      <div style={{ width: '100%', maxWidth: '1080px', margin: '0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: '40px', paddingBottom: '40px', paddingLeft: '24px', paddingRight: '24px', boxSizing: 'border-box' }}>
-        
-        {/* Title Section */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '30px', marginBottom: '30px', width: '100%' }}>
-          <h1 style={{ fontSize: '48px', lineHeight: '56px', textAlign: 'center', margin: 0 }}>
-            Your results are ready!
-          </h1>
-          
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '32px', width: '100%', maxWidth: '640px' }}>
-            <p style={{ fontSize: '18px', lineHeight: '26px', textAlign: 'center', margin: 0, fontWeight: 500 }}>
-              {currentContent.subheading}
-            </p>
-            
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', width: '100%', maxWidth: '545px' }}>
-              <div style={{ position: 'relative', width: '100%', height: '3px', background: 'linear-gradient(to right, #EB0E0E, #FFD723, #15C151)', borderRadius: '99px', marginTop: '16px' }}>
-                <motion.div 
-                  style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', marginLeft: '-18px', width: '36px', height: '36px', backgroundColor: '#ffffff', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', border: `3px solid ${currentContent.iconColor}` }}
-                  initial={{ left: "16.6%" }}
-                  animate={{ left: currentContent.iconZone }}
-                  transition={{ type: "spring", stiffness: 60, damping: 15 }}
-                >
-                  <User size={18} color={currentContent.iconColor} />
-                </motion.div>
-              </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '175px', height: '40px', backgroundColor: '#EB0E0E', borderRadius: '25px' }}>
-                  <span style={{ fontSize: '18px', color: '#ffffff', fontWeight: 'bold' }}>DELAYED</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '175px', height: '40px', backgroundColor: '#FFD723', borderRadius: '25px' }}>
-                  <span style={{ fontSize: '18px', color: '#383838', fontWeight: 'bold' }}>AT RISK</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '175px', height: '40px', backgroundColor: '#15C151', borderRadius: '25px' }}>
-                  <span style={{ fontSize: '18px', color: '#ffffff', fontWeight: 'bold' }}>ON TRACK</span>
-                </div>
+      <div className="qr-hero">
+        <svg className="qr-petal" viewBox="0 0 220 220" fill="none" aria-hidden="true">
+          <circle cx="190" cy="20" r="48.0" fill="var(--qr-teal)" opacity=".24"/>
+          <path d="M91.0,28.8 A40.8,40.8 0 0,1 165.0,63.2 Z" fill="var(--qr-yellow)" opacity=".34"/>
+          <path d="M180.5,106.2 A33.6,33.6 0 0,1 119.5,77.8 Z" fill="var(--qr-purple)" opacity=".28"/>
+          <circle cx="48" cy="150" r="21.6" fill="var(--qr-teal)" opacity=".2"/>
+          <path d="M65.7,157.4 A18.0,18.0 0 0,1 98.3,172.6 Z" fill="var(--qr-yellow)" opacity=".3"/>
+        </svg>
+        <svg className="qr-petal-bl" viewBox="0 0 220 220" fill="none" aria-hidden="true">
+          <circle cx="172" cy="70" r="21.6" fill="var(--qr-teal)" opacity=".2"/>
+          <path d="M154.3,62.6 A18.0,18.0 0 0,1 121.7,47.4 Z" fill="var(--qr-yellow)" opacity=".3"/>
+          <path d="M39.5,113.8 A33.6,33.6 0 0,1 100.5,142.2 Z" fill="var(--qr-teal)" opacity=".28"/>
+        </svg>
+        <div className="qr-wrap" style={{ paddingBottom: 0, paddingLeft: 0, paddingRight: 0 }}>
+          <div className="qr-brand">
+            <img src="https://onlinespeechie.com/wp-content/uploads/2024/03/os-logo-new.png" alt="Online Speechie" style={{ height: 38, width: 'auto' }} />
+          </div>
+
+          <h1>{namePossessive} talking is in the <em>{status}</em> range for their age.</h1>
+
+          <div className="qr-band">
+            <div className="qr-track">
+              <div className="qr-marker-wrap" style={{ left: status === 'Delayed' ? '16.6%' : status === 'At Risk' ? '50%' : '83.3%' }}>
+                <span className="qr-marker-tag">{nameOrFallback} is here</span>
+                <div className="qr-marker"></div>
               </div>
+            </div>
+            <div className="qr-pills">
+              {STATUS_ORDER.map((key) => {
+                const tone = PILL_TONES[key];
+                const isOn = key === status;
+                return (
+                  <div key={key} className="qr-pill" style={{ background: isOn ? tone.onBg : tone.offBg, color: isOn ? tone.onFg : tone.offFg }}>
+                    {tone.label}
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Text Box */}
-        <div style={{ width: '100%', maxWidth: '640px', backgroundColor: '#2EBCAB', borderRadius: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px', padding: '20px', marginBottom: '80px', boxSizing: 'border-box' }}>
-          <h2 style={{ fontSize: '24px', lineHeight: '32px', textAlign: 'center', color: '#ffffff', margin: 0 }}>
-            The good news?
-          </h2>
-          <div style={{ width: '20px', height: '1px', backgroundColor: '#ffffff', margin: '8px 0' }}></div>
-          <p style={{ fontSize: '16px', lineHeight: '22px', textAlign: 'center', color: '#ffffff', margin: 0 }}>
-            {currentContent.textBox}
-          </p>
-          <p style={{ fontSize: '16px', lineHeight: '22px', textAlign: 'center', color: '#ffffff', margin: '8px 0 0 0', fontWeight: 'bold' }}>
-            Watch the video below to understand what your results mean and your next steps.
-          </p>
-        </div>
+      <div className="qr-wrap">
+        <p className="qr-inbox">
+          <svg width="17" height="17" viewBox="0 0 20 20" fill="none" stroke="#6b7078" strokeWidth="1.6">
+            <rect x="2" y="4" width="16" height="12" rx="2"/><path d="M2.5 5.5 10 11l7.5-5.5"/>
+          </svg>
+          Your full results and next steps are on their way to your inbox.
+        </p>
 
-        {/* Video Section */}
-        <div className="video-card">
-          <div className="video-wrapper-desktop">
-            <iframe 
-              ref={desktopVideoRef}
-              src={currentContent.vimeoLink} 
-              style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
-              allow="autoplay; fullscreen; picture-in-picture" 
+        <h2>Let me explain what this result means</h2>
+
+        <div className="qr-video">
+          <div className="qr-frame">
+            <iframe
+              ref={videoRef}
+              src={`https://player.vimeo.com/video/${content.videoId}?autoplay=0&muted=0&playsinline=1&title=0&byline=0&portrait=0&dnt=1`}
+              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 0 }}
+              allow="autoplay; fullscreen; picture-in-picture"
               allowFullScreen
+              title={`${status} result explainer`}
             ></iframe>
           </div>
-          <div className="video-wrapper-mobile">
-            <iframe 
-              ref={mobileVideoRef}
-              src={currentContent.portraitVimeoLink} 
-              style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
-              allow="autoplay; fullscreen; picture-in-picture" 
-              allowFullScreen
-            ></iframe>
-          </div>
-          <div className="video-text">
-            <h2 style={{ fontSize: '24px', lineHeight: '32px', color: '#383838', margin: 0 }}>
-              In this video: What your results mean & what to focus on next
-            </h2>
-            <p style={{ fontSize: '16px', lineHeight: '26px', color: '#383838', margin: 0 }}>
-              Your full results and personalised action plan will be emailed to you shortly.
-            </p>
-          </div>
         </div>
 
-        {/* Ready, Set, Talk pitch introduction */}
-        <div style={{ width: '100%', maxWidth: '860px', display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'center', textAlign: 'center', marginBottom: '40px' }}>
-          <h2 style={{ fontSize: '32px', lineHeight: '36px', color: '#383838', margin: 0 }}>
-            A simple, step-by-step plan to help your <span style={{ color: '#2EBCAB' }}>toddler talk </span>using your <span style={{ color: '#D387FF' }}>everyday moments</span>
-          </h2>
-          <p style={{ fontSize: '18px', lineHeight: '26px', color: '#383838', margin: 0 }}>
-            like bath time, snack, play and the <span style={{ fontWeight: 'bold', textDecoration: 'underline' }}>everyday magic</span> you already share.
-          </p>
-        </div>
+        <div className={status === 'On Track' ? 'qr-next-steps' : 'qr-steps-panel'}>
+          <h2>My recommended next steps</h2>
 
-        {/* CTA Button */}
-        <div 
-          style={{ backgroundColor: '#F9F9E5', padding: '12px 24px', borderRadius: '25px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '80px' }}
-        >
-          <span style={{ fontWeight: 'bold', fontSize: '20px', color: '#383838' }}>
-            Ready, Set…Talk!™
-          </span>
-        </div>
+          {lead.map((paragraph, i) => (
+            <p className="qr-lead" key={i}>{paragraph}</p>
+          ))}
 
-        {/* Full Pitch Container */}
-        <div style={{ width: '100%', backgroundColor: '#F9F9E5', border: '3px solid #2EBCAB', borderRadius: '12px', boxShadow: '-8px 8px 0px 0px rgba(46,188,171,1)', display: 'flex', flexDirection: 'column', marginBottom: '80px', overflow: 'hidden', boxSizing: 'border-box' }}>
-          
-          {/* Top Frame 275 */}
-          <div className="pitch-top">
-            <h3 style={{ fontSize: '26px', lineHeight: '32px', color: '#383838', margin: 0, fontWeight: 700 }}>
-              You’ll learn the <span style={{ color: '#2EBCAB' }}>exact strategies</span> I use as a paediatric speech pathologist to help late talkers:
-            </h3>
-            
-            <div className="pitch-columns">
-              {/* Left Column (Frame 274) */}
-              <div className="pitch-col">
-                {['Copy sounds and words', 'Communicate wants & needs', 'Stay engaged during play'].map((text, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <CheckCircle2 size={24} color="#2EBCAB" style={{ flexShrink: 0 }} />
-                    <span style={{ fontSize: '16px', color: '#383838', lineHeight: '24px' }}>{text}</span>
-                  </div>
-                ))}
-              </div>
-              
-              {/* Right Column (Frame 273) */}
-              <div className="pitch-col">
-                {['Build vocabulary naturally', 'Make real progress at home in just 10 minutes a day'].map((text, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <CheckCircle2 size={24} color="#2EBCAB" style={{ flexShrink: 0 }} />
-                    <span style={{ fontSize: '16px', color: '#383838', lineHeight: '24px' }}>{text}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            
-            <p style={{ fontSize: '18px', fontWeight: 600, lineHeight: '24px', color: '#383838', margin: 0 }}>
-              And because every strategy comes with real-life demos with real toddlers, you'll know exactly what to say, when to pause, and how to respond. No more guessing.
-            </p>
-          </div>
-
-          {/* Bottom Bar inside Frame 255 */}
-          <div className="pitch-bottom">
-            <p style={{ fontSize: '16px', lineHeight: '22px', color: '#ffffff', flex: 1, margin: 0 }}>
-              Whether your child needs a little boost or more ongoing support, <span style={{ fontWeight: 'bold' }}>Ready, Set…Talk!™</span> helps you stop second-guessing and start feeling capable, confident, and clear about how to help.
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-              <div style={{ fontWeight: 'bold', fontSize: '32px', lineHeight: '32px', color: '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                All for just <span style={{ position: 'relative', display: 'inline-block', fontSize: '0.85em' }}>$397<span style={{ position: 'absolute', left: 0, top: '50%', width: '100%', height: '3px', backgroundColor: '#D18AFF', transform: 'rotate(-15deg)', pointerEvents: 'none' }} /></span> → <span style={{ fontSize: '1.1em' }}>$297</span>
-              </div>
-              <a 
-                href={ctaLink}
-                onClick={handleCtaClick('pitch')}
-                style={{ backgroundColor: '#ffffff', borderRadius: '25px', padding: '12px 36px', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', cursor: 'pointer' }}
-              >
-                <span style={{ fontWeight: 'bold', fontSize: '20px', color: '#2EBCAB', whiteSpace: 'nowrap' }}>
-                  Start Ready, Set…Talk!™
-                </span>
-              </a>
-            </div>
-          </div>
-          
-          {/* Bottom Bar Frame 256 */}
-          <div style={{ width: '100%', padding: '16px 15px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box' }}>
-            <p style={{ fontSize: '16px', lineHeight: '20px', textAlign: 'center', color: '#D387FF', fontWeight: 700, margin: 0 }}>
-              6 months of access • Watch anytime • 30-day confidence guarantee
-            </p>
-          </div>
-        </div>
-
-        {/* Testimonials */}
-        <div style={{ width: '100%', maxWidth: '1080px', marginBottom: '80px', boxSizing: 'border-box' }}>
-          <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px 0', boxSizing: 'border-box' }}>
-            <h3 style={{ fontWeight: 'bold', fontSize: '32px', color: '#383838', marginBottom: '40px', margin: '0 0 40px 0' }}>What other parents say</h3>
-            
-            <div className="testimonials-container">
-              {testimonials.map((t) => (
-                <div key={t.id} className="testimonial-item">
-                  <div style={{ width: '60px', height: '60px', borderRadius: '50%', overflow: 'hidden', flexShrink: 0, border: '3px solid #D387FF', boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#E8E8E8' }}>
-                    {t.img ? (
-                      <img src={t.img} alt={t.author} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    ) : (
-                      <User size={30} color="#9ca3af" />
-                    )}
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <p style={{ fontSize: '15px', lineHeight: '22px', color: '#383838', margin: 0, fontStyle: 'italic' }}>
-                      “{t.text}”
-                    </p>
-                    <p style={{ fontWeight: 'bold', fontSize: '15px', color: '#383838', margin: 0 }}>
-                      {t.author}
-                    </p>
-                  </div>
+          <div className="qr-opts">
+            {content.ctas.map((cta) => (
+              <div key={cta.id} className={`qr-opt qr-${cta.tone}${cta.solo ? ' qr-solo' : ''}`}>
+                <div className="qr-head">
+                  <span className="qr-time">{cta.time}</span>
+                  <h3>{cta.title}</h3>
                 </div>
-              ))}
-            </div>
+                <div className="qr-body">
+                  <p>{cta.body}</p>
+                  {cta.chips && (
+                    <div className="qr-chips">
+                      {cta.chips.map((chip) => <span className="qr-chip" key={chip}>{chip}</span>)}
+                    </div>
+                  )}
+                  {cta.freeNote && <p className="qr-free">{cta.freeNote}</p>}
+                  <a
+                    className="qr-cta"
+                    href={cta.href}
+                    id={cta.id}
+                    data-cta-id={cta.dataCtaId}
+                    data-cta-name={cta.dataCtaName}
+                    onClick={handleCtaClick(cta)}
+                  >
+                    {cta.ctaText}
+                  </a>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* Author Bio Section */}
-        <div className="bio-container">
-          <div className="bio-image-wrapper">
-             <div className="bio-image-inner">
-                <img 
-                  src="/saffira-profile.jpg" 
-                  alt="Saffira - Online Speechie" 
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                />
-             </div>
-          </div>
-          <div className="bio-text">
-            <h2 style={{ fontWeight: 'bold', fontSize: '40px', lineHeight: '48px', margin: 0 }}>
-              I&apos;ve Been on Both Sides
-            </h2>
-            <p style={{ fontSize: '18px', lineHeight: '26px', margin: 0 }}>
-              Hi, I&apos;m Saffira—paediatric speech pathologist, mum, and founder of the <span style={{ fontWeight: 'bold' }}>Online Speechie</span>.
-            </p>
-            <p style={{ fontSize: '18px', lineHeight: '26px', margin: 0 }}>
-              For over 14 years, I&apos;ve supported thousands of late-talking toddlers using practical, evidence-informed strategies that are now used by families worldwide.
-            </p>
-            <p style={{ fontSize: '18px', lineHeight: '26px', margin: 0 }}>
-              I know parents don&apos;t need more vague advice or endless opinions, they need someone to show them exactly what to do, step by step.
-            </p>
-            <p style={{ fontSize: '18px', lineHeight: '26px', margin: 0 }}>
-              That&apos;s why I created <span style={{ fontWeight: 'bold' }}>Ready, Set...Talk!™</span>.
-            </p>
-          </div>
+        <div className="qr-footer">
+          <b>About the Late Talker Quiz™</b>
+          <p>The Late Talker Quiz™ uses clinically proven tools and age-specific normative data to give you an accurate snapshot of your child&apos;s communication skills. It classifies their development as Delayed, At Risk or On Track so you have clear, science-backed information to share with your doctor or specialist, and know exactly what to do next.</p>
+          <b>Disclaimer</b>
+          <p>This is a screening tool, not a diagnosis. It indicates a level of risk based on the information you provided. For a diagnosis or personalised therapy, see a speech pathologist or your preferred health professional. Individual results vary and we make no guarantee of outcomes. <a href={TERMS_URL} target="_blank" rel="noopener noreferrer">Full terms here.</a></p>
         </div>
-
-        {/* Final Bottom Purple CTA Section */}
-        <div style={{ width: '100%', maxWidth: '800px', backgroundColor: '#D387FF', borderRadius: '16px', padding: '40px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', gap: '16px', boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)', marginBottom: '40px', boxSizing: 'border-box' }}>
-          <p style={{ fontSize: '16px', color: 'rgba(255,255,255,0.9)', margin: 0 }}>
-            6 months of access • Watch anytime • 30-day confidence guarantee
-          </p>
-          <h2 style={{ fontWeight: 'bold', fontSize: '34px', lineHeight: '34px', color: '#ffffff', margin: '0 0 8px 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-            All for just <span style={{ position: 'relative', display: 'inline-block', fontSize: '0.85em' }}>$397<span style={{ position: 'absolute', left: 0, top: '50%', width: '100%', height: '3px', backgroundColor: '#2FBCAC', transform: 'rotate(-15deg)', pointerEvents: 'none' }} /></span> → <span style={{ fontSize: '1.1em' }}>$297</span>
-          </h2>
-          <a 
-            href={ctaLink}
-            onClick={handleCtaClick('final')}
-            style={{ backgroundColor: '#ffffff', color: '#D387FF', padding: '11px 16px', borderRadius: '9999px', fontWeight: 'bold', fontSize: '15px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)', textDecoration: 'none', position: 'relative', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', whiteSpace: 'nowrap' }}
-          >
-            Start Ready, Set...Talk!™
-          </a>
-        </div>
-
       </div>
     </div>
   );
