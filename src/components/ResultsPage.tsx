@@ -140,8 +140,9 @@ export default function ResultsPage({
   useEffect(() => {
     console.log('🔍 [Meta Debug] ResultsPage mounted, step:', step);
 
-    // STRICT GUARD: Must be on the final results step with valid submission data
-    if ((step === 'result' || isQuizCompleted) && submissionResult && typeof window !== 'undefined') {
+    // STRICT GUARD: Must be on the final results step with valid submission data.
+    // On Track results are not reported to Meta (pixel Lead + CAPI) so ad optimisation targets Delayed / At Risk only.
+    if ((step === 'result' || isQuizCompleted) && submissionResult && submissionResult.scoreStatus !== 'On Track' && typeof window !== 'undefined') {
       // Unique key per submission (uses submission ID, email, or timestamp fallback)
       const leadId = submissionResult?.id || submissionResult?.email || `lead_${Date.now()}`;
       const storageKey = `meta_lead_fired_${leadId}`;
