@@ -45,6 +45,13 @@ body {
   }
 }
 
+/* Results page: full-width, white, attached to the header (the hero banner runs edge to edge). */
+.main-layout.main-layout--results {
+  padding: 0;
+  align-items: stretch;
+  background-color: #fff;
+}
+
 h1, h2, h3 {
   font-weight: 700;
 }

@@ -49,6 +49,16 @@ function fireFbqOnce(key: string, ...args: Parameters<NonNullable<Window['fbq']>
   window.fbq(...args);
 }
 
+// Child's age in whole months from their date of birth (same rule the API uses), or null if unusable.
+function ageInMonths(dob: string): number | null {
+  const d = new Date(dob);
+  if (!dob || Number.isNaN(d.getTime())) return null;
+  const now = new Date();
+  let months = (now.getFullYear() - d.getFullYear()) * 12 + (now.getMonth() - d.getMonth());
+  if (now.getDate() < d.getDate()) months--;
+  return months >= 0 ? months : null;
+}
+
 export default function AssessmentApp() {
   const getSafeEmbedUrl = (url: string) => {
     if (!url) return '';
@@ -340,7 +350,7 @@ export default function AssessmentApp() {
         </div>
       </header>
 
-      <main className="main-layout">
+      <main className={`main-layout${step === 'result' ? ' main-layout--results' : ''}`}>
       
       {step !== 'result' ? (
         <div className="card-panel animate-fade-in" style={{ width: '100%', maxWidth: step === 'quiz' ? '1200px' : '600px' }}>
@@ -586,6 +596,7 @@ export default function AssessmentApp() {
         submissionResult && (
           <ResultsPage 
             submissionResult={submissionResult} 
+            childAgeMonths={ageInMonths(childDoB)}
             onRestart={() => window.location.reload()} 
             isQuizCompleted={step === 'result' && !!submissionResult}
             step={step}

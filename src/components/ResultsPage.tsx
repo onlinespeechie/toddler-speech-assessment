@@ -17,6 +17,8 @@ interface ResultsPageProps {
     phone?: string;
     childFirstName?: string | null;
   };
+  /** Child's age in whole months, worked out from their date of birth in the quiz. */
+  childAgeMonths?: number | null;
   onRestart: () => void;
   isQuizCompleted?: boolean;
   step?: string;
@@ -24,7 +26,7 @@ interface ResultsPageProps {
 }
 
 const GUIDE_URL = 'https://onlinespeechie.com/blog/talking-more-in-10-minutes-a-day-heres-what-every-late-talker-parent-should-do/';
-const MASTERCLASS_URL = 'https://onlinespeechie.com/late-talker-masterclass/';
+const MASTERCLASS_URL = 'https://onlinespeechie.com/talk-more-masterclass/';
 const ACTIVITY_LIBRARY_URL = 'https://onlinespeechie.com/activity';
 const TERMS_URL = 'https://onlinespeechie.com/terms-conditons-policies/';
 
@@ -39,9 +41,10 @@ type Cta = {
   ctaText: string;
   href: string;
   tone: 'teal' | 'purple';
-  solo?: boolean;
   chips?: string[];
   freeNote?: string;
+  /** On narrow screens the CTA cards stack; this one goes to the top. */
+  mobileFirst?: boolean;
 };
 
 type StatusKey = 'Delayed' | 'At Risk' | 'On Track';
@@ -54,18 +57,38 @@ const PILL_TONES: Record<StatusKey, { onBg: string; onFg: string; offBg: string;
   'On Track': { onBg: 'var(--qr-teal)', onFg: '#fff', offBg: 'var(--qr-teal-l)', offFg: 'var(--qr-teal-deep)', label: 'ON TRACK' },
 };
 
-const GUIDE_MASTERCLASS_LEAD = "I've been helping families of toddlers learning to talk for around 15 years, and I've put together the two resources below for families just like yours. Both are free, and both will give you something you can use today. Which one you pick just depends on how much time you've got right now, and how deep you want to go.";
+/** The child's name as it should read in each position, with the agreed fallbacks. */
+type NameForms = {
+  cap: string;        // sentence start: "Henry" / "Your child"
+  low: string;        // mid-sentence: "Henry" / "your child"
+  capPoss: string;    // "Henry's" / "Your child's"
+  lowPoss: string;    // "Henry's" / "your child's"
+  lowPossCurly: string;
+  littleOne: string;  // the one agreed exception: "Henry" / "your little one"
+};
+
+function nameForms(childName: string): NameForms {
+  return {
+    cap: childName || 'Your child',
+    low: childName || 'your child',
+    capPoss: childName ? `${childName}'s` : "Your child's",
+    lowPoss: childName ? `${childName}'s` : "your child's",
+    lowPossCurly: childName ? `${childName}’s` : 'your child’s',
+    littleOne: childName || 'your little one',
+  };
+}
 
 function guideMasterclassCtas(status: 'delayed' | 'atrisk'): Cta[] {
+  const label = status === 'delayed' ? 'Delayed' : 'At Risk';
   return [
     {
       id: `cta-guide-${status}`,
       dataCtaId: `${status}_guide`,
-      dataCtaName: `Free Guide — ${status === 'delayed' ? 'Delayed' : 'At Risk'}`,
+      dataCtaName: `Free Guide — ${label}`,
       ctaType: 'guide',
       time: 'GOT 5 MINUTES?',
       title: 'Free guide',
-      body: 'The three things that make the biggest difference to a toddler learning to talk at home, including some activities you can try this week. A few minutes to read.',
+      body: 'The three things that make the biggest difference to a toddler learning to talk at home. An introduction for those who only have a few minutes up their sleeve.',
       ctaText: 'Read the guide',
       href: GUIDE_URL,
       tone: 'teal',
@@ -73,7 +96,7 @@ function guideMasterclassCtas(status: 'delayed' | 'atrisk'): Cta[] {
     {
       id: `cta-masterclass-${status}`,
       dataCtaId: `${status}_masterclass`,
-      dataCtaName: `Free Masterclass — ${status === 'delayed' ? 'Delayed' : 'At Risk'}`,
+      dataCtaName: `Free Masterclass — ${label}`,
       ctaType: 'masterclass',
       time: 'GOT 45 MINUTES?',
       title: 'Free masterclass',
@@ -85,51 +108,84 @@ function guideMasterclassCtas(status: 'delayed' | 'atrisk'): Cta[] {
   ];
 }
 
-const STATUS_CONTENT: Record<StatusKey, { videoId: string; lead: string[]; ctas: Cta[] }> = {
+const ON_TRACK_CTAS: Cta[] = [
+  {
+    id: 'cta-library-ontrack',
+    dataCtaId: 'ontrack_library',
+    dataCtaName: 'Activity Library — On Track',
+    ctaType: 'library',
+    time: 'FREE TO BROWSE',
+    title: 'The activity library',
+    body: "Bite-sized activities for any toy and any routine, filtered by what you've got in the house and how much time you have. Every one is built around the words you want your toddler using.",
+    ctaText: 'Explore the activity library',
+    href: ACTIVITY_LIBRARY_URL,
+    tone: 'teal',
+    chips: ['bath time', 'bubbles', 'first words', '10 minutes', 'duplo', 'getting dressed'],
+    freeNote: 'Plenty are free to watch right now.',
+  },
+  {
+    id: 'cta-masterclass-ontrack',
+    dataCtaId: 'ontrack_masterclass',
+    dataCtaName: 'Free Masterclass — On Track',
+    ctaType: 'masterclass',
+    time: 'GOT 45 MINUTES?',
+    title: 'Free masterclass',
+    body: 'The exact method I teach parents to get their toddler talking more at home. What activities to focus on, what words to use, and demonstrations with real children.',
+    ctaText: 'Watch the masterclass',
+    href: MASTERCLASS_URL,
+    tone: 'purple',
+    freeNote: 'I built it for parents whose children are behind, but the method is the same for those trying to get ahead. More words, then words together, whatever stage your child is at.',
+    mobileFirst: true,
+  },
+];
+
+type StatusContent = {
+  videoId: string;
+  /** Short paragraph under the banner (Delayed / At Risk only). */
+  explain?: (n: NameForms, ageMonths: number | null) => string;
+  /** The "trust your instincts" paragraphs under the video (Delayed / At Risk only). */
+  turns: boolean;
+  leads: (n: NameForms, ageMonths: number | null) => string[];
+  ctas: Cta[];
+};
+
+const STATUS_CONTENT: Record<StatusKey, StatusContent> = {
   'Delayed': {
     videoId: '1224169398',
-    lead: [
-      "Remember, around one in five children are late to talk. It isn't uncommon. But what you do from here does matter.",
-      GUIDE_MASTERCLASS_LEAD,
+    explain: (n, age) =>
+      `This result is specific to ${n.lowPossCurly} age. It’s scored against normative data for ${age != null ? `${age}-month-olds` : 'children their age'}, which means ${n.littleOne} is behind where we’d expect them to be by now. They’re either not yet saying enough words, or not combining words into phrases often enough.`,
+    turns: true,
+    leads: (n) => [
+      "Remember, around one in five children are identified as being behind with their talking. It isn't uncommon. But what you do from here does matter.",
+      `I've been helping families of toddlers learning to talk for almost 20 years, and I've put together the two resources below for parents just like you. Both are free and both are designed for children of ${n.lowPoss} age.`,
     ],
     ctas: guideMasterclassCtas('delayed'),
   },
   'At Risk': {
     videoId: '1224169399',
-    lead: [
-      "Around one in five children are late to talk. It's not uncommon. And you've caught it at the best possible point, because you're getting ahead of it rather than catching up.",
-      GUIDE_MASTERCLASS_LEAD,
+    explain: (n, age) =>
+      `${age != null ? `At ${age} months,` : 'Right now,'} ${n.low} is tracking just under where we’d expect, based on the normative data for their age. Not far enough under to call it a delay, but enough to warrant attention. It might be the number of words they’re using, or how often they’re putting words together. What matters is whether that gap closes or widens over the next few months.`,
+    turns: true,
+    leads: (n) => [
+      "Around one in five children are identified as being behind with their talking. It's not uncommon. And you've caught it at the best possible point, because you're getting ahead of it rather than catching up.",
+      `I've been helping families of toddlers learning to talk for almost 20 years, and I've put together the two resources below for parents just like you. Both are free and both are designed for children of ${n.lowPoss} age.`,
     ],
     ctas: guideMasterclassCtas('atrisk'),
   },
   'On Track': {
     videoId: '1224169400',
-    lead: [
-      "Here's the part most parents don't get told: early language keeps compounding. The words a toddler has at two feed their vocabulary at four, their reading at six, and it carries on from there.",
-      '', // filled dynamically with the child's name below
+    turns: false,
+    leads: (n, age) => [
+      `Here's the part most parents don't get told: early language keeps compounding. The words a toddler has ${age != null ? `at ${age} months` : 'at this age'} feed their chatter at four, their friendships at five, their reading at six, and it carries on from there.`,
+      `So keep doing the good work you're obviously already doing, and keep focusing on ${n.lowPoss} talking. Two free ways to do that below.`,
     ],
-    ctas: [
-      {
-        id: 'cta-library-ontrack',
-        dataCtaId: 'ontrack_library',
-        dataCtaName: 'Activity Library — On Track',
-        ctaType: 'library',
-        time: 'FREE TO BROWSE',
-        title: 'The activity library',
-        body: "Bite-sized activities for any toy and any routine, filtered by what you've got in the house and how much time you have. Every one is built around the words you want your toddler using.",
-        ctaText: 'Explore the activity library',
-        href: ACTIVITY_LIBRARY_URL,
-        tone: 'teal',
-        solo: true,
-        chips: ['bath time', 'bubbles', 'first words', '10 minutes', 'duplo', 'getting dressed'],
-        freeNote: 'Plenty are free to watch right now.',
-      },
-    ],
+    ctas: ON_TRACK_CTAS,
   },
 };
 
 export default function ResultsPage({
   submissionResult,
+  childAgeMonths = null,
   onRestart,
   isQuizCompleted = true,
   step = 'result',
@@ -287,13 +343,11 @@ export default function ResultsPage({
     : 'Delayed';
 
   const childName = submissionResult?.childFirstName?.trim() || '';
-  const namePossessive = childName ? `${childName}'s` : "Your child's";
-  const nameOrFallback = childName || 'Your child';
+  const names = nameForms(childName);
 
   const content = STATUS_CONTENT[status];
-  const lead = status === 'On Track'
-    ? [content.lead[0], `So keep doing the good work you're obviously already doing, and keep focusing on ${namePossessive} talking. If you want some ideas for that, head over to my activity library.`]
-    : content.lead;
+  const explain = content.explain ? content.explain(names, childAgeMonths) : null;
+  const leads = content.leads(names, childAgeMonths);
 
   // Fires cta_click with both a fully-qualified id (e.g. "atrisk_masterclass") and the
   // underlying cta_type/result_status split out separately, so GA4 reporting can break down
@@ -333,12 +387,12 @@ export default function ResultsPage({
         }
         .qr-page *{box-sizing:border-box}
         .qr-wrap{max-width:880px;margin:0 auto;padding:0 24px 90px}
+        @media (min-width:721px){ .qr-wrap{max-width:960px;padding-left:40px;padding-right:40px} }
 
-        .qr-hero{background:var(--qr-hero);border-radius:0 0 40px 40px;padding:44px 24px 46px;margin:0 0 26px;
+        .qr-hero{background:var(--qr-hero);border-radius:0 0 48px 48px;padding:56px 24px 56px;margin:0 0 26px;
               position:relative;overflow:hidden}
         .qr-petal{position:absolute;top:-60px;right:-60px;width:220px;height:220px;opacity:.9}
         .qr-petal-bl{position:absolute;bottom:-60px;left:-60px;width:220px;height:220px;opacity:.9}
-        .qr-brand{display:flex;align-items:center;justify-content:center;margin:0 0 34px;position:relative;z-index:1}
 
         .qr-hero h1{font-size:42px;line-height:1.14;letter-spacing:-1px;text-align:center;margin:0 0 28px;font-weight:800;
               position:relative;z-index:1;max-width:680px;margin-left:auto;margin-right:auto}
@@ -355,6 +409,7 @@ export default function ResultsPage({
         .qr-pill{flex:1;text-align:center;padding:10px 6px;border-radius:999px;font-weight:700;
               font-size:12.5px;letter-spacing:.3px}
 
+        .qr-explain{font-size:18px;line-height:1.6;margin:0 auto 20px;max-width:720px;color:#3a3542;text-align:center}
         .qr-inbox{display:flex;align-items:center;justify-content:center;gap:8px;
                color:var(--qr-muted);font-size:14px;margin:0 0 22px}
 
@@ -363,17 +418,20 @@ export default function ResultsPage({
         .qr-video{border-radius:18px;overflow:hidden;margin-bottom:26px;box-shadow:0 16px 36px rgba(36,31,46,.16)}
         .qr-video .qr-frame{background:linear-gradient(135deg,#2a2733,#1c1a22);position:relative;aspect-ratio:3/2}
 
+        .qr-turn{font-size:17px;line-height:1.62;margin:0 0 16px;max-width:720px;color:#3a3542}
+        .qr-turn:last-of-type{margin-bottom:34px}
+        .qr-turn em{font-style:normal;font-weight:700;color:#241f2e}
         .qr-lead{font-size:17px;line-height:1.62;margin:0 0 18px;max-width:720px;color:#3a3542}
         .qr-lead:last-of-type{margin-bottom:32px}
 
         .qr-steps-panel{background:#f9f9e5;border-radius:28px;padding:40px 32px 44px;margin:0 0 58px}
+        @media (min-width:721px){ .qr-steps-panel{padding:48px 48px 52px} }
         .qr-steps-panel h2{margin:0 0 20px}
         .qr-next-steps{margin:0 0 58px}
         .qr-next-steps h2{margin:0 0 20px}
 
         .qr-opts{display:flex;gap:24px}
         .qr-opt{flex:1;border-radius:20px;overflow:hidden;display:flex;flex-direction:column;border:2px solid transparent}
-        .qr-opt.qr-solo{flex:0 1 560px;max-width:560px}
         .qr-opt.qr-teal{border-color:var(--qr-teal);box-shadow:-6px 6px 0 0 var(--qr-teal)}
         .qr-opt.qr-purple{border-color:var(--qr-purple);box-shadow:-6px 6px 0 0 var(--qr-purple)}
         .qr-opt .qr-head{padding:20px 22px;color:#fff}
@@ -388,7 +446,7 @@ export default function ResultsPage({
         .qr-opt p{margin:0 0 22px;font-size:15.5px;line-height:1.55;color:#4a4f57;flex:1}
         .qr-opt p.qr-free{margin:0 0 20px;font-size:14px;color:var(--qr-muted);flex:none}
         .qr-chips{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 20px}
-        .qr-chip{font-size:13px;padding:6px 12px;border-radius:999px;background:#eaf7f4;color:#3a7d72}
+        .qr-chip{font-size:13px;padding:6px 12px;border-radius:999px;background:#eaf7f4;color:#3a7d72;border:1px solid #d3ece6}
         .qr-cta{display:block;text-align:center;text-decoration:none;font-weight:800;font-size:16px;
              padding:15px 18px;border-radius:999px;color:#fff;border:2px solid transparent;
              box-shadow:0px 0px 0px 0px rgba(0,0,0,.17);
@@ -414,7 +472,7 @@ export default function ResultsPage({
           .qr-petal-bl{width:140px;height:140px;bottom:-30px;left:-30px}
           .qr-steps-panel{padding:28px 20px 32px;border-radius:20px}
           .qr-opts{flex-direction:column}
-          .qr-opt.qr-solo{max-width:100%}
+          .qr-opt.qr-first-mobile{order:-1}
         }
       `}</style>
 
@@ -432,16 +490,12 @@ export default function ResultsPage({
           <path d="M39.5,113.8 A33.6,33.6 0 0,1 100.5,142.2 Z" fill="var(--qr-teal)" opacity=".28"/>
         </svg>
         <div className="qr-wrap" style={{ paddingBottom: 0, paddingLeft: 0, paddingRight: 0 }}>
-          <div className="qr-brand">
-            <img src="https://onlinespeechie.com/wp-content/uploads/2024/03/os-logo-new.png" alt="Online Speechie" style={{ height: 38, width: 'auto' }} />
-          </div>
-
-          <h1>{namePossessive} talking is in the <em>{status}</em> range for their age.</h1>
+          <h1>{names.capPoss} talking is in the <em>{status}</em> range for their age.</h1>
 
           <div className="qr-band">
             <div className="qr-track">
               <div className="qr-marker-wrap" style={{ left: status === 'Delayed' ? '16.6%' : status === 'At Risk' ? '50%' : '83.3%' }}>
-                <span className="qr-marker-tag">{nameOrFallback} is here</span>
+                <span className="qr-marker-tag">{names.cap} is here</span>
                 <div className="qr-marker"></div>
               </div>
             </div>
@@ -461,6 +515,8 @@ export default function ResultsPage({
       </div>
 
       <div className="qr-wrap">
+        {explain && <p className="qr-explain">{explain}</p>}
+
         <p className="qr-inbox">
           <svg width="17" height="17" viewBox="0 0 20 20" fill="none" stroke="#6b7078" strokeWidth="1.6">
             <rect x="2" y="4" width="16" height="12" rx="2"/><path d="M2.5 5.5 10 11l7.5-5.5"/>
@@ -483,16 +539,23 @@ export default function ResultsPage({
           </div>
         </div>
 
+        {content.turns && (
+          <>
+            <p className="qr-turn">If you&rsquo;ve suspected this for a while, let this be the moment you <em>trust your instincts</em> and let go of the old &ldquo;wait and see&rdquo; advice.</p>
+            <p className="qr-turn">And if it&rsquo;s come as a surprise, that&rsquo;s okay too. My own daughter developed a stutter and I&rsquo;m a Speechie for goodness sake! It&rsquo;s not your fault, but it is something to start thinking about.</p>
+          </>
+        )}
+
         <div className={status === 'On Track' ? 'qr-next-steps' : 'qr-steps-panel'}>
           <h2>My recommended next steps</h2>
 
-          {lead.map((paragraph, i) => (
+          {leads.map((paragraph, i) => (
             <p className="qr-lead" key={i}>{paragraph}</p>
           ))}
 
           <div className="qr-opts">
             {content.ctas.map((cta) => (
-              <div key={cta.id} className={`qr-opt qr-${cta.tone}${cta.solo ? ' qr-solo' : ''}`}>
+              <div key={cta.id} className={`qr-opt qr-${cta.tone}${cta.mobileFirst ? ' qr-first-mobile' : ''}`}>
                 <div className="qr-head">
                   <span className="qr-time">{cta.time}</span>
                   <h3>{cta.title}</h3>
