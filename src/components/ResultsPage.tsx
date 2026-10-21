@@ -385,6 +385,9 @@ export default function ResultsPage({
           font-family:"Gilmer",-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
           line-height:1.55;-webkit-font-smoothing:antialiased;
         }
+        /* Results step: full width, white, attached to the site header. Lives here (not globals.css)
+           because the production CSS optimiser drops this selector from globals.css. */
+        .main-layout.main-layout--results{padding:0;align-items:stretch;background-color:#fff}
         .qr-page *{box-sizing:border-box}
         .qr-wrap{max-width:880px;margin:0 auto;padding:0 24px 90px}
         @media (min-width:721px){ .qr-wrap{max-width:960px;padding-left:40px;padding-right:40px} }
