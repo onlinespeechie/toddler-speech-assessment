@@ -33,7 +33,7 @@ export default async function SubmissionsPage() {
   });
 
   return (
-    <div style={{ padding: '40px', maxWidth: '1200px', margin: '0 auto', fontFamily: "'Quicksand', sans-serif" }}>
+    <div style={{ padding: '40px', maxWidth: '1400px', margin: '0 auto', fontFamily: "'Quicksand', sans-serif" }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
         <h1 style={{ fontSize: '2.5rem', margin: 0 }}>Submissions List</h1>
         <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
@@ -47,30 +47,43 @@ export default async function SubmissionsPage() {
         </div>
       </div>
 
-      <div className="card-panel" style={{ overflowX: 'auto', padding: '24px' }}>
-        <table style={{ width: '100%', minWidth: '850px', borderCollapse: 'collapse', textAlign: 'left' }}>
+      <div className="card-panel" style={{ overflowX: 'auto', padding: '24px 16px' }}>
+        <table style={{ width: '100%', minWidth: '1000px', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.95rem' }}>
           <thead>
             <tr style={{ borderBottom: '2px solid var(--border-color)' }}>
-              <th style={{ padding: '12px 8px' }}>Submission Date</th>
+              <th style={{ padding: '12px 8px', width: '1%' }}>Submission Date</th>
               <th style={{ padding: '12px 8px' }}>Parent Name</th>
               <th style={{ padding: '12px 8px' }}>Parent Email</th>
-              <th style={{ padding: '12px 8px' }}>Age at Submission</th>
-              <th style={{ padding: '12px 8px' }}>Action</th>
+              <th style={{ padding: '12px 8px', width: '1%' }}>Age at Submission</th>
+              <th style={{ padding: '12px 8px', width: '1%' }}>Score</th>
+              <th style={{ padding: '12px 8px', width: '1%' }}>Status</th>
+              <th style={{ padding: '12px 8px', width: '1%' }}>Comm Stage</th>
+              <th style={{ padding: '12px 8px', width: '1%' }}>Speech Clarity Concern</th>
+              <th style={{ padding: '12px 8px', width: '1%' }}>Action</th>
             </tr>
           </thead>
           <tbody>
             {submissions.map((sub) => {
               return (
                 <tr key={sub.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                  <td style={{ padding: '12px 8px' }}>
+                  <td style={{ padding: '12px 8px', whiteSpace: 'nowrap' }}>
                     {sub.createdAt.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
                   </td>
                   <td style={{ padding: '12px 8px' }}>{sub.parentName}</td>
-                  <td style={{ padding: '12px 8px', color: 'var(--text-muted)' }}>{sub.parentEmail}</td>
-                  <td style={{ padding: '12px 8px' }}>{calculateAgeAtSubmission(sub.childDob, sub.createdAt)}</td>
+                  <td title={sub.parentEmail} style={{ padding: '12px 8px', color: 'var(--text-muted)', whiteSpace: 'nowrap', maxWidth: '280px', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sub.parentEmail}</td>
+                  <td style={{ padding: '12px 8px', whiteSpace: 'nowrap' }}>{calculateAgeAtSubmission(sub.childDob, sub.createdAt)}</td>
+                  <td style={{ padding: '12px 8px', fontWeight: 700 }}>{sub.totalScore}</td>
+                  <td style={{ padding: '12px 8px', fontWeight: 700, color: sub.scoreStatus === 'On Track' ? '#10b981' : '#f59e0b' }}>
+                    {sub.scoreStatus}
+                  </td>
+                  <td style={{ padding: '12px 8px', minWidth: '140px' }}>{sub.communicationStage}</td>
+                  <td style={{ padding: '12px 8px', fontWeight: 700, color: sub.speechClarity === 'SPEECH CLARITY CONCERN' ? '#ef4444' : '#10b981' }}>
+                    {/* the values are 'SPEECH CLARITY CONCERN' / 'NO CONCERN' (null on older submissions) */}
+                    {sub.speechClarity ? (sub.speechClarity === 'SPEECH CLARITY CONCERN' ? 'Yes' : 'No') : 'N/A'}
+                  </td>
                   <td style={{ padding: '12px 8px' }}>
                     <Link href={`/admin/submissions/${sub.id}`}>
-                      <button className="btn btn-primary" style={{ padding: '6px 12px', fontSize: '0.85rem' }}>
+                      <button className="btn btn-primary" style={{ padding: '6px 12px', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
                         View Details
                       </button>
                     </Link>
@@ -80,7 +93,7 @@ export default async function SubmissionsPage() {
             })}
             {submissions.length === 0 && (
               <tr>
-                <td colSpan={5} style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                <td colSpan={9} style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>
                   No submissions found.
                 </td>
               </tr>

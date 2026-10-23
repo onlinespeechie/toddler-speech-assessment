@@ -100,7 +100,7 @@ export default async function SubmissionDetailPage({ params }: { params: Promise
         </div>
         <div className="card-panel" style={{ padding: '24px', textAlign: 'center', width: '100%', margin: 0 }}>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontWeight: 600, textTransform: 'uppercase' }}>Speech Clarity</p>
-          <h2 style={{ fontSize: '1.2rem', marginTop: '8px', color: submission.speechClarity?.includes('CONCERN') ? '#ef4444' : '#10b981' }}>
+          <h2 style={{ fontSize: '1.2rem', marginTop: '8px', color: submission.speechClarity === 'SPEECH CLARITY CONCERN' ? '#ef4444' : '#10b981' }}>
             {submission.speechClarity || 'N/A'}
           </h2>
         </div>
