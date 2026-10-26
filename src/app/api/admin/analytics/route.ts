@@ -9,8 +9,9 @@ export async function GET(req: Request) {
     // 1. Verify administrative session (bypass in local development)
     if (process.env.NODE_ENV !== 'development') {
       const supabase = await createClient();
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError || !session?.user) {
+      // getUser() validates the token with Supabase; getSession() only reads the (forgeable) cookie.
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
     }

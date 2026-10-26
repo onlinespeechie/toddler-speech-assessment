@@ -1,4 +1,5 @@
 import { createServerClient } from '@supabase/ssr';
+import { isLoginTooOld } from '@/lib/adminSession';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
@@ -118,19 +119,32 @@ export async function proxy(request: NextRequest) {
     }
   );
 
+  // getUser() asks Supabase Auth to validate the token. getSession() only reads the cookie, and a forged
+  // cookie passed it: the admin pages and APIs are protected by this check alone.
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user: validatedUser },
+  } = await supabase.auth.getUser();
+  let user = validatedUser;
 
-  const user = session?.user;
+  // Admin logins expire after 7 days. Clear this browser's session only (scope 'local'), not other sessions.
+  if (user && isLoginTooOld(user.last_sign_in_at)) {
+    await supabase.auth.signOut({ scope: 'local' });
+    user = null;
+  }
+
+  // Redirects and API errors must carry the cookies Supabase just set or cleared.
+  const withSessionCookies = (res: NextResponse) => {
+    supabaseResponse.cookies.getAll().forEach((c) => res.cookies.set(c));
+    return res;
+  };
 
   // 1. If user is NOT logged in:
   if (!user) {
     if (isApiRoute) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return withSessionCookies(NextResponse.json({ error: 'Unauthorized' }, { status: 401 }));
     }
     if (pathname !== loginPath) {
-      return NextResponse.redirect(new URL(loginPath, request.url));
+      return withSessionCookies(NextResponse.redirect(new URL(loginPath, request.url)));
     }
     return supabaseResponse;
   }
@@ -172,7 +186,7 @@ export async function proxy(request: NextRequest) {
   }
 
   if (targetPath) {
-    return NextResponse.redirect(new URL(targetPath, request.url));
+    return withSessionCookies(NextResponse.redirect(new URL(targetPath, request.url)));
   }
 
   return supabaseResponse;
