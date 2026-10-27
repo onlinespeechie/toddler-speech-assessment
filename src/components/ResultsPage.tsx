@@ -25,7 +25,7 @@ interface ResultsPageProps {
   testEventCode?: string;
 }
 
-const GUIDE_URL = 'https://onlinespeechie.com/blog/talking-more-in-10-minutes-a-day-heres-what-every-late-talker-parent-should-do/';
+const GUIDE_URL = 'https://onlinespeechie.com/blog/talking-more-in-10-minutes/';
 const MASTERCLASS_URL = 'https://onlinespeechie.com/talk-more-masterclass/';
 const ACTIVITY_LIBRARY_URL = 'https://onlinespeechie.com/activity';
 const TERMS_URL = 'https://onlinespeechie.com/terms-conditons-policies/';
