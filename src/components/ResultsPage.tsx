@@ -25,7 +25,6 @@ interface ResultsPageProps {
   testEventCode?: string;
 }
 
-const GUIDE_URL = 'https://onlinespeechie.com/blog/talking-more-in-10-minutes/';
 const MASTERCLASS_URL = 'https://onlinespeechie.com/talk-more-masterclass/';
 const ACTIVITY_LIBRARY_URL = 'https://onlinespeechie.com/activity';
 const TERMS_URL = 'https://onlinespeechie.com/terms-conditons-policies/';
@@ -78,28 +77,16 @@ function nameForms(childName: string): NameForms {
   };
 }
 
-function guideMasterclassCtas(status: 'delayed' | 'atrisk'): Cta[] {
+function masterclassCtas(status: 'delayed' | 'atrisk'): Cta[] {
   const label = status === 'delayed' ? 'Delayed' : 'At Risk';
   return [
-    {
-      id: `cta-guide-${status}`,
-      dataCtaId: `${status}_guide`,
-      dataCtaName: `Free Guide — ${label}`,
-      ctaType: 'guide',
-      time: 'GOT 5 MINUTES?',
-      title: 'Free guide',
-      body: 'The three things that make the biggest difference to a toddler learning to talk at home. An introduction for those who only have a few minutes up their sleeve.',
-      ctaText: 'Read the guide',
-      href: GUIDE_URL,
-      tone: 'teal',
-    },
     {
       id: `cta-masterclass-${status}`,
       dataCtaId: `${status}_masterclass`,
       dataCtaName: `Free Masterclass — ${label}`,
       ctaType: 'masterclass',
-      time: 'GOT 45 MINUTES?',
-      title: 'Free masterclass',
+      time: '45 MINUTES',
+      title: 'Free TALK MORE Masterclass',
       body: 'The exact method I teach parents to get their toddler talking more at home. What activities to focus on, what words to use, and demonstrations with real children in everyday moments.',
       ctaText: 'Watch the masterclass',
       href: MASTERCLASS_URL,
@@ -153,24 +140,24 @@ const STATUS_CONTENT: Record<StatusKey, StatusContent> = {
   'Delayed': {
     videoId: '1224169398',
     explain: (n, age) =>
-      `This result is specific to ${n.lowPossCurly} age. It’s scored against normative data for ${age != null ? `${age}-month-olds` : 'children their age'}, which means ${n.littleOne} is behind where we’d expect them to be by now. They’re either not yet saying enough words, or not combining words into phrases often enough.`,
+      `This result is specific to ${n.lowPossCurly} age i.e. it’s based on developmental norms for ${age != null ? `${age}-month-olds` : 'children their age'}. Simply, it means ${n.littleOne} is behind where we’d expect them to be by now. They’re either not yet saying enough words, or not combining words into phrases often enough.`,
     turns: true,
     leads: (n) => [
       "Remember, around one in five children are identified as being behind with their talking. It isn't uncommon. But what you do from here does matter.",
-      `I've been helping families of toddlers learning to talk for almost 20 years, and I've put together the two resources below for parents just like you. Both are free and both are designed for children of ${n.lowPoss} age.`,
+      `After almost 20 years helping toddlers learn to talk, I've put the most important things I teach parents into a free masterclass. It's designed for children of ${n.lowPoss} age, so it's the best place to start.`,
     ],
-    ctas: guideMasterclassCtas('delayed'),
+    ctas: masterclassCtas('delayed'),
   },
   'At Risk': {
     videoId: '1224169399',
     explain: (n, age) =>
-      `${age != null ? `At ${age} months,` : 'Right now,'} ${n.low} is tracking just under where we’d expect, based on the normative data for their age. Not far enough under to call it a delay, but enough to warrant attention. It might be the number of words they’re using, or how often they’re putting words together. What matters is whether that gap closes or widens over the next few months.`,
+      `${age != null ? `At ${age} months,` : 'Right now,'} ${n.low} is tracking just under where we’d expect, based on developmental norms for their age. Not far enough under to call it a delay, but enough to warrant attention. It might be the number of words they’re using, or how often they’re putting words together. What matters is whether that gap closes or widens over the next few months.`,
     turns: true,
     leads: (n) => [
       "Around one in five children are identified as being behind with their talking. It's not uncommon. And you've caught it at the best possible point, because you're getting ahead of it rather than catching up.",
-      `I've been helping families of toddlers learning to talk for almost 20 years, and I've put together the two resources below for parents just like you. Both are free and both are designed for children of ${n.lowPoss} age.`,
+      `After almost 20 years helping toddlers learn to talk, I've put the most important things I teach parents into a free masterclass. It's designed for children of ${n.lowPoss} age, so it's the best place to start.`,
     ],
-    ctas: guideMasterclassCtas('atrisk'),
+    ctas: masterclassCtas('atrisk'),
   },
   'On Track': {
     videoId: '1224169400',
@@ -589,7 +576,7 @@ export default function ResultsPage({
 
         <div className="qr-footer">
           <b>About the Late Talker Quiz™</b>
-          <p>The Late Talker Quiz™ uses clinically proven tools and age-specific normative data to give you an accurate snapshot of your child&apos;s communication skills. It classifies their development as Delayed, At Risk or On Track so you have clear, science-backed information to share with your doctor or specialist, and know exactly what to do next.</p>
+          <p>The Late Talker Quiz™ uses clinically proven tools and age-specific developmental norms to give you an accurate snapshot of your child&apos;s communication skills. It classifies their development as Delayed, At Risk or On Track so you have clear, science-backed information to share with your doctor or specialist, and know exactly what to do next.</p>
           <b>Disclaimer</b>
           <p>This is a screening tool, not a diagnosis. It indicates a level of risk based on the information you provided. For a diagnosis or personalised therapy, see a speech pathologist or your preferred health professional. Individual results vary and we make no guarantee of outcomes. <a href={TERMS_URL} target="_blank" rel="noopener noreferrer">Full terms here.</a></p>
         </div>
