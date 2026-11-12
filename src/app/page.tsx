@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import ResultsPage from '../components/ResultsPage';
+import { suggestEmail, normaliseEmail } from '../lib/emailTypo';
 
 declare global {
   interface Window {
     fbq?: (...args: any[]) => void;
+    posthog?: { capture: (event: string) => void };
   }
 }
 
@@ -108,6 +110,8 @@ export default function AssessmentApp() {
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [emailSuggestion, setEmailSuggestion] = useState<string | null>(null);
+  const [emailError, setEmailError] = useState('');
 
   const [sequence, setSequence] = useState<SequenceData | null>(null);
   const [icsSequence, setIcsSequence] = useState<SequenceData | null>(null);
@@ -273,6 +277,33 @@ export default function AssessmentApp() {
     }
   };
 
+  const track = (event: string) => window.posthog?.capture(event);
+
+  // Runs on blur: typo suggestion (never blocks) + server check (blocks bad/disposable/no-mail addresses).
+  // Server errors or slowness fail open here; the submit route checks again.
+  const checkEmailField = async (): Promise<boolean> => {
+    const email = normaliseEmail(parentEmail);
+    if (email !== parentEmail) setParentEmail(email);
+    setEmailError('');
+    const s = email ? suggestEmail(email) : null;
+    if (s !== emailSuggestion) {
+      setEmailSuggestion(s);
+      if (s) track('email_typo_suggested');
+    }
+    if (!email) return true;
+    try {
+      const res = await fetch('/api/assessment/validate-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+        signal: AbortSignal.timeout(4000),
+      });
+      const data = await res.json();
+      if (data.ok === false) { setEmailError(data.message); return false; }
+    } catch { /* fail open */ }
+    return true;
+  };
+
   // 3. Final Submit with Parent Info
   const handleFinalSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -280,6 +311,7 @@ export default function AssessmentApp() {
       setError('Please fill out your contact details');
       return;
     }
+    if (!(await checkEmailField())) return;
     if (!agreeConsent) {
       setError('You must agree to the processing of your personal data and Terms and Conditions to proceed.');
       return;
@@ -543,12 +575,32 @@ export default function AssessmentApp() {
                 <label className="input-label">Email Address</label>
                 <input 
                   type="email" 
+                  inputMode="email"
+                  autoComplete="email"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
                   className="input-field" 
                   placeholder="hello@example.com" 
                   value={parentEmail}
-                  onChange={e => setParentEmail(e.target.value)}
+                  onChange={e => { setParentEmail(e.target.value); setEmailError(''); setEmailSuggestion(null); }}
+                  onBlur={checkEmailField}
+                  aria-invalid={!!emailError}
+                  aria-describedby="email-feedback"
                   disabled={loading}
                 />
+                <div id="email-feedback" role="status" aria-live="polite">
+                  {emailError && <div style={{ color: '#ef4444', marginTop: '6px', fontWeight: 600, fontSize: '14px' }}>{emailError}</div>}
+                  {emailSuggestion && !emailError && (
+                    <div style={{ marginTop: '6px', fontSize: '14px' }}>
+                      Did you mean <strong>{emailSuggestion}</strong>?{' '}
+                      <button type="button" className="btn-link" style={{ background: 'none', border: 'none', padding: 0, color: 'var(--primary)', textDecoration: 'underline', fontWeight: 'bold', cursor: 'pointer' }}
+                        onClick={() => { setParentEmail(emailSuggestion); setEmailSuggestion(null); track('email_typo_accepted'); }}>
+                        Yes, use this
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="input-group">

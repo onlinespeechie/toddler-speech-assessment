@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { rateLimit, getClientIp } from '@/lib/rateLimit';
 import { signPdfUrl } from '@/lib/pdfToken';
+import { checkEmail } from '@/lib/emailCheck';
+import { normaliseEmail } from '@/lib/emailTypo';
 
 export async function POST(req: Request) {
   if (!rateLimit(`submit:${getClientIp(req)}`, 10, 10 * 60_000)) {
@@ -9,14 +11,17 @@ export async function POST(req: Request) {
   }
   try {
     const body = await req.json();
-    const { parentName, parentEmail, childFirstName, childDoB, totalScore, finalTag, answers, sessionId } = body;
+    const { parentName, parentEmail: rawParentEmail, childFirstName, childDoB, totalScore, finalTag, answers, sessionId } = body;
 
-    if (!parentName || !parentEmail || !childDoB) {
+    if (!parentName || !rawParentEmail || !childDoB) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(parentEmail)) {
-      return NextResponse.json({ error: 'Invalid email address' }, { status: 400 });
+    // Trim + lowercase the domain, then block bad/disposable/no-mail addresses before anything is saved or sent to Kit.
+    const parentEmail = normaliseEmail(String(rawParentEmail));
+    const emailCheck = await checkEmail(parentEmail);
+    if (!emailCheck.ok) {
+      return NextResponse.json({ error: emailCheck.message }, { status: 400 });
     }
 
     // Precise age calculation in months and days
