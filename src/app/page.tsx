@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import ResultsPage from '../components/ResultsPage';
+import EmailFixBanner from '../components/EmailFixBanner';
 import { suggestEmail, normaliseEmail } from '../lib/emailTypo';
 
 declare global {
@@ -121,6 +122,7 @@ export default function AssessmentApp() {
 
   const [submissionResult, setSubmissionResult] = useState<any>(null);
   const [submissionId, setSubmissionId] = useState<string | null>(null);
+  const [fixAuth, setFixAuth] = useState<{ exp: string; sig: string } | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -341,6 +343,10 @@ export default function AssessmentApp() {
       if (!res.ok) throw new Error(data.error || 'Submission failed');
       
       setSubmissionResult(data.submission);
+      if (data.pdfUrl) {
+        const q = new URL(data.pdfUrl, window.location.origin).searchParams;
+        setFixAuth({ exp: q.get('exp') || '', sig: q.get('sig') || '' });
+      }
       setSubmissionId(data.submission.id);
       setStep('result');
       sessionStorage.removeItem('quiz_session_id');
@@ -646,6 +652,8 @@ export default function AssessmentApp() {
         </div>
       ) : (
         submissionResult && (
+          <>
+          {fixAuth && submissionId && <EmailFixBanner email={submissionResult.parentEmail} submissionId={submissionId} exp={fixAuth.exp} sig={fixAuth.sig} />}
           <ResultsPage 
             submissionResult={submissionResult} 
             childAgeMonths={ageInMonths(childDoB)}
@@ -653,6 +661,7 @@ export default function AssessmentApp() {
             isQuizCompleted={step === 'result' && !!submissionResult}
             step={step}
           />
+          </>
         )
       )}
     </main>
