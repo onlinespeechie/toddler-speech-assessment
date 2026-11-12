@@ -247,6 +247,16 @@ export default function ResultsPage({
     }
   }, [step, isQuizCompleted, submissionResult]);
 
+  // PostHog: results are a step on "/", not their own URL, so send a custom event once per submission.
+  // Only the status is sent (no name, email or age).
+  useEffect(() => {
+    if (!((step === 'result' || isQuizCompleted) && submissionResult && typeof window !== 'undefined')) return;
+    const phKey = `posthog_results_fired_${submissionResult?.id || submissionResult?.email || 'unknown'}`;
+    if (sessionStorage.getItem(phKey)) return;
+    sessionStorage.setItem(phKey, 'true');
+    (window as any).posthog?.capture('quiz_results_viewed', { result_status: submissionResult?.scoreStatus });
+  }, [step, isQuizCompleted, submissionResult]);
+
   // GA4 scroll depth tracking -- fires once the visitor scrolls 90% down the results page
   useEffect(() => {
     if (!((step === 'result' || isQuizCompleted) && submissionResult && typeof window !== 'undefined')) return;
